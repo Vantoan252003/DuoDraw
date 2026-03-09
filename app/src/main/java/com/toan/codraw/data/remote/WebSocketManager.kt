@@ -1,9 +1,9 @@
 package com.toan.codraw.data.remote
 
+import com.toan.codraw.domain.model.RoomSignal
 import com.toan.codraw.domain.model.Stroke
 import com.toan.codraw.domain.repository.ConnectionState
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.SharedFlow
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.WebSocket
@@ -34,6 +34,7 @@ class WebSocketManager @Inject constructor(
 
     fun receiveStrokes(): Flow<Stroke> = listener.strokeFlow
 
+    fun receiveSignals(): Flow<RoomSignal> = listener.signalFlow
+
     fun connectionState(): Flow<ConnectionState> = listener.connectionStateFlow
 }
-

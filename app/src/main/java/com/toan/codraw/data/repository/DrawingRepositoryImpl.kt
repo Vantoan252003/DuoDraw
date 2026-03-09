@@ -5,9 +5,13 @@ import com.toan.codraw.data.local.SessionManager
 import com.toan.codraw.data.remote.ApiService
 import com.toan.codraw.data.remote.WebSocketManager
 import com.toan.codraw.data.remote.dto.CompleteDrawingRequest
+import com.toan.codraw.data.remote.dto.CompletedDrawingResponse
 import com.toan.codraw.data.remote.dto.PointDto
+import com.toan.codraw.data.remote.dto.RoomSignalDto
 import com.toan.codraw.data.remote.dto.StrokeDto
 import com.toan.codraw.domain.model.CompletedDrawing
+import com.toan.codraw.domain.model.Point
+import com.toan.codraw.domain.model.RoomSignal
 import com.toan.codraw.domain.model.Stroke
 import com.toan.codraw.domain.repository.ConnectionState
 import com.toan.codraw.domain.repository.DrawingRepository
@@ -34,12 +38,31 @@ class DrawingRepositoryImpl @Inject constructor(
     }
 
     override fun sendStroke(stroke: Stroke) {
-        val type = if (stroke.colorHex == "#CLEAR") "CLEAR" else "STROKE"
+        val type = when {
+            stroke.colorHex == "#CLEAR" -> "CLEAR"
+            stroke.isPreview -> "STROKE_PREVIEW"
+            else -> "STROKE"
+        }
         val dto = stroke.toDto(type)
         webSocketManager.send(gson.toJson(dto))
     }
 
+    override fun sendRoomSignal(signal: RoomSignal) {
+        webSocketManager.send(
+            gson.toJson(
+                RoomSignalDto(
+                    type = signal.type,
+                    playerId = signal.playerId,
+                    approved = signal.approved,
+                    message = signal.message
+                )
+            )
+        )
+    }
+
     override fun receiveStrokes(): Flow<Stroke> = webSocketManager.receiveStrokes()
+
+    override fun receiveRoomSignals(): Flow<RoomSignal> = webSocketManager.receiveSignals()
 
     override fun connectionState(): Flow<ConnectionState> = webSocketManager.connectionState()
 
@@ -50,15 +73,25 @@ class DrawingRepositoryImpl @Inject constructor(
         )
         val response = apiService.completeDrawing(bearerToken(), request)
         if (response.isSuccessful) {
-            response.body()!!.let {
-                CompletedDrawing(
-                    id = it.id,
-                    roomCode = it.roomCode,
-                    savedByUsername = it.savedByUsername,
-                    strokeCount = it.strokeCount,
-                    completedAt = it.completedAt
-                )
-            }
+            response.body()!!.toDomain()
+        } else {
+            throw Exception(response.errorBody()?.string() ?: "Error ${response.code()}")
+        }
+    }
+
+    override suspend fun getCompletedDrawing(roomCode: String): Result<CompletedDrawing> = runCatching {
+        val response = apiService.getCompletedDrawing(bearerToken(), roomCode)
+        if (response.isSuccessful) {
+            response.body()!!.toDomain()
+        } else {
+            throw Exception(response.errorBody()?.string() ?: "Error ${response.code()}")
+        }
+    }
+
+    override suspend fun getMyCompletedDrawings(): Result<List<CompletedDrawing>> = runCatching {
+        val response = apiService.getMyCompletedDrawings(bearerToken())
+        if (response.isSuccessful) {
+            response.body().orEmpty().map { it.toDomain() }
         } else {
             throw Exception(response.errorBody()?.string() ?: "Error ${response.code()}")
         }
@@ -71,6 +104,29 @@ class DrawingRepositoryImpl @Inject constructor(
         colorHex = colorHex,
         strokeWidth = strokeWidth,
         isEraser = isEraser,
+        preview = isPreview,
         playerId = playerId
+    )
+
+    private fun CompletedDrawingResponse.toDomain() = CompletedDrawing(
+        id = id,
+        roomCode = roomCode,
+        hostUsername = hostUsername,
+        guestUsername = guestUsername,
+        roomType = roomType,
+        savedByUsername = savedByUsername,
+        strokeCount = strokeCount,
+        completedAt = completedAt,
+        strokes = strokes.map {
+            Stroke(
+                id = it.id,
+                points = it.points.map { point -> Point(point.x, point.y) },
+                colorHex = it.colorHex,
+                strokeWidth = it.strokeWidth,
+                isEraser = it.isEraser,
+                isPreview = it.preview,
+                playerId = it.playerId
+            )
+        }
     )
 }

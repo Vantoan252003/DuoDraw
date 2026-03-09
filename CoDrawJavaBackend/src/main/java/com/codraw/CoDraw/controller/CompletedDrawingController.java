@@ -20,6 +20,15 @@ public class CompletedDrawingController {
         this.completedDrawingService = completedDrawingService;
     }
 
+    @GetMapping("/mine")
+    public ResponseEntity<?> getMyDrawings(@AuthenticationPrincipal User user) {
+        try {
+            return ResponseEntity.ok(completedDrawingService.getMyCompletedDrawings(user.getUsername()));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
+        }
+    }
+
     @PostMapping("/complete")
     public ResponseEntity<?> completeDrawing(
             @AuthenticationPrincipal User user,
@@ -46,4 +55,3 @@ public class CompletedDrawingController {
         }
     }
 }
-

@@ -45,6 +45,17 @@ interface ApiService {
         @Path("code") code: String
     ): Response<RoomResponse>
 
+    @GET("api/drawings/mine")
+    suspend fun getMyCompletedDrawings(
+        @Header("Authorization") token: String
+    ): Response<List<CompletedDrawingResponse>>
+
+    @GET("api/drawings/{roomCode}")
+    suspend fun getCompletedDrawing(
+        @Header("Authorization") token: String,
+        @Path("roomCode") roomCode: String
+    ): Response<CompletedDrawingResponse>
+
     @POST("api/drawings/complete")
     suspend fun completeDrawing(
         @Header("Authorization") token: String,

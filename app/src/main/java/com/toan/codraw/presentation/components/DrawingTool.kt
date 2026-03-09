@@ -11,6 +11,7 @@ import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -23,6 +24,10 @@ fun DrawingTools(
     viewModel: DrawingViewModel,
     modifier: Modifier = Modifier
 ) {
+    val currentColor by viewModel.currentColorState
+    val isEraserMode by viewModel.isEraserModeState
+    val currentWidth by viewModel.currentWidthState
+
     Surface(
         modifier = modifier.fillMaxWidth(),
         tonalElevation = 4.dp,
@@ -36,7 +41,7 @@ fun DrawingTools(
                 modifier = Modifier.fillMaxWidth()
             ) {
                 viewModel.palette.forEach { color ->
-                    val isSelected = !viewModel.isEraserMode && viewModel.currentColor == color
+                    val isSelected = !isEraserMode && currentColor == color
                     Box(
                         modifier = Modifier
                             .size(28.dp)
@@ -63,8 +68,8 @@ fun DrawingTools(
                 // Stroke width slider
                 Text("Size", style = MaterialTheme.typography.labelSmall)
                 Slider(
-                    value = viewModel.currentWidth,
-                    onValueChange = { viewModel.currentWidth = it },
+                    value = currentWidth,
+                    onValueChange = viewModel::setStrokeWidth,
                     valueRange = 2f..40f,
                     modifier = Modifier.weight(1f)
                 )
@@ -73,7 +78,7 @@ fun DrawingTools(
                 IconButton(
                     onClick = { viewModel.setEraser() },
                     colors = IconButtonDefaults.iconButtonColors(
-                        containerColor = if (viewModel.isEraserMode)
+                        containerColor = if (isEraserMode)
                             MaterialTheme.colorScheme.primaryContainer else Color.Transparent
                     )
                 ) {

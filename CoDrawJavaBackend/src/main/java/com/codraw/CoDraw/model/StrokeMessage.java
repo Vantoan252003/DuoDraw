@@ -18,6 +18,7 @@ public class StrokeMessage {
     @JsonAlias({"isEraser", "eraser"})
     @JsonProperty("isEraser")
     private boolean eraser;
+    private boolean preview;
     private int playerId;
 
     @Data

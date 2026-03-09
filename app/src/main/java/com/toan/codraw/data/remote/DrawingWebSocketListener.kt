@@ -2,8 +2,10 @@ package com.toan.codraw.data.remote
 
 import android.util.Log
 import com.google.gson.Gson
+import com.toan.codraw.data.remote.dto.RoomSignalDto
 import com.toan.codraw.data.remote.dto.StrokeDto
 import com.toan.codraw.domain.model.Point
+import com.toan.codraw.domain.model.RoomSignal
 import com.toan.codraw.domain.model.Stroke
 import com.toan.codraw.domain.repository.ConnectionState
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -16,6 +18,7 @@ import okhttp3.WebSocketListener
 class DrawingWebSocketListener(
     private val gson: Gson,
     val strokeFlow: MutableSharedFlow<Stroke> = MutableSharedFlow(extraBufferCapacity = 64),
+    val signalFlow: MutableSharedFlow<RoomSignal> = MutableSharedFlow(extraBufferCapacity = 32),
     val connectionStateFlow: MutableStateFlow<ConnectionState> = MutableStateFlow(ConnectionState.IDLE)
 ) : WebSocketListener() {
 
@@ -26,16 +29,35 @@ class DrawingWebSocketListener(
 
     override fun onMessage(webSocket: WebSocket, text: String) {
         try {
-            val dto = gson.fromJson(text, StrokeDto::class.java)
-            val stroke = Stroke(
-                id = dto.id,
-                points = dto.points.map { Point(it.x, it.y) },
-                colorHex = if (dto.type == "CLEAR") "#CLEAR" else dto.colorHex,
-                strokeWidth = dto.strokeWidth,
-                isEraser = dto.isEraser,
-                playerId = dto.playerId
-            )
-            runBlocking { strokeFlow.emit(stroke) }
+            val rawType = gson.fromJson(text, Map::class.java)["type"]?.toString() ?: "STROKE"
+            when (rawType) {
+                "STROKE", "STROKE_PREVIEW", "CLEAR" -> {
+                    val dto = gson.fromJson(text, StrokeDto::class.java)
+                    val stroke = Stroke(
+                        id = dto.id,
+                        points = dto.points.map { Point(it.x, it.y) },
+                        colorHex = if (dto.type == "CLEAR") "#CLEAR" else dto.colorHex,
+                        strokeWidth = dto.strokeWidth,
+                        isEraser = dto.isEraser,
+                        isPreview = dto.preview || dto.type == "STROKE_PREVIEW",
+                        playerId = dto.playerId
+                    )
+                    runBlocking { strokeFlow.emit(stroke) }
+                }
+                else -> {
+                    val dto = gson.fromJson(text, RoomSignalDto::class.java)
+                    runBlocking {
+                        signalFlow.emit(
+                            RoomSignal(
+                                type = dto.type,
+                                playerId = dto.playerId,
+                                approved = dto.approved,
+                                message = dto.message
+                            )
+                        )
+                    }
+                }
+            }
         } catch (e: Exception) {
             Log.e("CoDraw-WS", "Failed to parse message: $text", e)
         }
@@ -51,4 +73,3 @@ class DrawingWebSocketListener(
         Log.e("CoDraw-WS", "WebSocket error", t)
     }
 }
-

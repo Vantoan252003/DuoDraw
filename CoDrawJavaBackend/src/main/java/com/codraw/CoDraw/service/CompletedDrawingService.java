@@ -39,19 +39,19 @@ public class CompletedDrawingService {
 
     public CompletedDrawingResponse completeDrawing(String roomCode, String username, List<StrokeMessage> strokes) {
         if (roomCode == null || roomCode.isBlank()) {
-            throw new RuntimeException("Thieu roomCode");
+            throw new RuntimeException("Missing roomCode");
         }
         if (strokes == null || strokes.isEmpty()) {
-            throw new RuntimeException("Ban ve dang trong, khong the hoan thanh");
+            throw new RuntimeException("Drawing is empty and cannot be completed");
         }
 
         String normalizedRoomCode = roomCode.trim().toUpperCase();
         Room room = roomRepository.findByRoomCode(normalizedRoomCode)
-                .orElseThrow(() -> new RuntimeException("Phong khong ton tai"));
+                .orElseThrow(() -> new RuntimeException("Room not found"));
 
         boolean isParticipant = username.equals(room.getHostUsername()) || username.equals(room.getGuestUsername());
         if (!isParticipant) {
-            throw new RuntimeException("Ban khong thuoc phong nay");
+            throw new RuntimeException("You are not part of this room");
         }
 
         CompletedDrawing drawing = completedDrawingRepository.findByRoomCode(normalizedRoomCode)
@@ -74,15 +74,23 @@ public class CompletedDrawingService {
 
     public CompletedDrawingResponse getCompletedDrawing(String roomCode) {
         CompletedDrawing drawing = completedDrawingRepository.findByRoomCode(roomCode.trim().toUpperCase())
-                .orElseThrow(() -> new RuntimeException("Chua co ban ve da hoan thanh cho phong nay"));
+                .orElseThrow(() -> new RuntimeException("No completed drawing found for this room"));
         return toResponse(drawing, readJson(drawing.getStrokesJson()));
+    }
+
+    public List<CompletedDrawingResponse> getMyCompletedDrawings(String username) {
+        return completedDrawingRepository
+                .findByHostUsernameOrGuestUsernameOrSavedByUsernameOrderByCompletedAtDesc(username, username, username)
+                .stream()
+                .map(drawing -> toResponse(drawing, readJson(drawing.getStrokesJson())))
+                .toList();
     }
 
     private String writeJson(List<StrokeMessage> strokes) {
         try {
             return objectMapper.writeValueAsString(strokes);
         } catch (Exception e) {
-            throw new RuntimeException("Khong the luu ban ve", e);
+            throw new RuntimeException("Could not save drawing", e);
         }
     }
 
@@ -93,7 +101,7 @@ public class CompletedDrawingService {
         try {
             return objectMapper.readValue(json, new TypeReference<>() {});
         } catch (Exception e) {
-            throw new RuntimeException("Khong the doc du lieu ban ve", e);
+            throw new RuntimeException("Could not read drawing data", e);
         }
     }
 
@@ -111,4 +119,3 @@ public class CompletedDrawingService {
         );
     }
 }
-

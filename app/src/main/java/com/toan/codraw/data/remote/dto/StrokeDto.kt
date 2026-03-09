@@ -10,5 +10,6 @@ data class StrokeDto(
     val strokeWidth: Float = 5f,
     @SerializedName(value = "isEraser", alternate = ["eraser"])
     val isEraser: Boolean = false,
+    val preview: Boolean = false,
     val playerId: Int = 1
 )

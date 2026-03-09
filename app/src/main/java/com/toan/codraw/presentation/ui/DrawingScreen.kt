@@ -6,7 +6,10 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -23,13 +26,14 @@ import com.toan.codraw.presentation.viewmodel.DrawingViewModel
 fun DrawingScreen(
     roomCode: String = "",
     localPlayerId: Int = 1,
+    playerCount: Int = 1,
     onNavigateBack: () -> Unit = {},
     viewModel: DrawingViewModel = hiltViewModel()
 ) {
     // Ket noi WS ngay khi vao man hinh
-    LaunchedEffect(roomCode, localPlayerId) {
+    LaunchedEffect(roomCode, localPlayerId, playerCount) {
         if (roomCode.isNotBlank()) {
-            viewModel.connect(roomCode, localPlayerId)
+            viewModel.connect(roomCode, localPlayerId, playerCount)
         } else {
             viewModel.localPlayerId = localPlayerId
         }
@@ -41,9 +45,35 @@ fun DrawingScreen(
 
     val currentPath1 by viewModel.currentPath1
     val currentPath2 by viewModel.currentPath2
+    val currentPathColor1 by viewModel.currentPathColor1
+    val currentPathColor2 by viewModel.currentPathColor2
+    val currentPathWidth1 by viewModel.currentPathWidth1
+    val currentPathWidth2 by viewModel.currentPathWidth2
+    val currentPathEraser1 by viewModel.currentPathEraser1
+    val currentPathEraser2 by viewModel.currentPathEraser2
     val isCompleting by viewModel.isCompleting
     val completionMessage by viewModel.completionMessage
     val isCompleted by viewModel.isCompleted
+    val showApprovalDialog by viewModel.showCompletionApprovalDialog
+    val awaitingGuestApproval by viewModel.awaitingGuestApproval
+
+    if (showApprovalDialog) {
+        AlertDialog(
+            onDismissRequest = { viewModel.respondToCompletionRequest(false) },
+            confirmButton = {
+                TextButton(onClick = { viewModel.respondToCompletionRequest(true) }) {
+                    Text("Agree")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { viewModel.respondToCompletionRequest(false) }) {
+                    Text("Decline")
+                }
+            },
+            title = { Text("Complete drawing?") },
+            text = { Text("Player 1 wants to complete and save this drawing. Do you agree?") }
+        )
+    }
 
     Scaffold(
         topBar = {
@@ -68,8 +98,8 @@ fun DrawingScreen(
                 actions = {
                     if (roomCode.isNotBlank()) {
                         Button(
-                            onClick = viewModel::completeDrawing,
-                            enabled = !isCompleting && !isCompleted,
+                            onClick = viewModel::onCompleteClicked,
+                            enabled = viewModel.canRequestCompletion,
                             modifier = Modifier.padding(end = 8.dp)
                         ) {
                             if (isCompleting) {
@@ -80,7 +110,13 @@ fun DrawingScreen(
                                 )
                                 Spacer(Modifier.width(8.dp))
                             }
-                            Text(if (isCompleted) "Completed" else "Complete")
+                            Text(
+                                when {
+                                    isCompleted -> "Completed"
+                                    awaitingGuestApproval -> "Pending"
+                                    else -> "Complete"
+                                }
+                            )
                         }
                     }
                 },
@@ -127,12 +163,13 @@ fun DrawingScreen(
                     DrawingCanvas(
                         strokes = viewModel.player1Strokes,
                         currentPath = currentPath1,
-                        currentColor = viewModel.currentColor,
-                        currentStrokeWidth = viewModel.currentWidth,
-                        isEraserMode = viewModel.isEraserMode,
-                        onDragStart = { x, y -> if (localPlayerId == 1) viewModel.startDrawing(x, y) },
-                        onDrag = { x, y -> if (localPlayerId == 1) viewModel.updateDrawing(x, y) },
-                        onDragEnd = { if (localPlayerId == 1) viewModel.finishDrawing() }
+                        currentPathColor = currentPathColor1,
+                        currentStrokeWidth = currentPathWidth1,
+                        isCurrentPathEraserMode = currentPathEraser1,
+                        onDragStart = viewModel::startDrawing,
+                        onDrag = viewModel::updateDrawing,
+                        onDragEnd = viewModel::finishDrawing,
+                        isInputEnabled = localPlayerId == 1 && !isCompleted
                     )
                 }
                 if (localPlayerId == 1) DrawingTools(viewModel = viewModel)
@@ -147,12 +184,13 @@ fun DrawingScreen(
                     DrawingCanvas(
                         strokes = viewModel.player2Strokes,
                         currentPath = currentPath2,
-                        currentColor = viewModel.currentColor,
-                        currentStrokeWidth = viewModel.currentWidth,
-                        isEraserMode = viewModel.isEraserMode,
-                        onDragStart = { x, y -> if (localPlayerId == 2) viewModel.startDrawing(x, y) },
-                        onDrag = { x, y -> if (localPlayerId == 2) viewModel.updateDrawing(x, y) },
-                        onDragEnd = { if (localPlayerId == 2) viewModel.finishDrawing() }
+                        currentPathColor = currentPathColor2,
+                        currentStrokeWidth = currentPathWidth2,
+                        isCurrentPathEraserMode = currentPathEraser2,
+                        onDragStart = viewModel::startDrawing,
+                        onDrag = viewModel::updateDrawing,
+                        onDragEnd = viewModel::finishDrawing,
+                        isInputEnabled = localPlayerId == 2 && !isCompleted
                     )
                 }
                 if (localPlayerId == 2) DrawingTools(viewModel = viewModel)

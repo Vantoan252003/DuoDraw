@@ -7,13 +7,16 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.toan.codraw.domain.model.CompletedDrawing
 import com.toan.codraw.domain.repository.RoomResult
 import com.toan.codraw.presentation.viewmodel.HomeViewModel
 
@@ -21,10 +24,12 @@ import com.toan.codraw.presentation.viewmodel.HomeViewModel
 @Composable
 fun HomeScreen(
     onNavigateToRoom: (String?) -> Unit,
+    onOpenSavedDrawing: (String) -> Unit,
     onLogout: () -> Unit = {},
     viewModel: HomeViewModel = hiltViewModel()
 ) {
     val publicRooms by viewModel.publicRooms.collectAsState()
+    val savedDrawings by viewModel.savedDrawings.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
     val errorMessage by viewModel.errorMessage.collectAsState()
 
@@ -37,8 +42,8 @@ fun HomeScreen(
                 ),
                 actions = {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        IconButton(onClick = viewModel::refreshPublicRooms) {
-                            Icon(Icons.Default.Refresh, contentDescription = "Refresh rooms")
+                        IconButton(onClick = viewModel::refreshHomeData) {
+                            Icon(Icons.Default.Refresh, contentDescription = "Refresh data")
                         }
                         Icon(
                             Icons.Default.AccountCircle,
@@ -100,19 +105,32 @@ fun HomeScreen(
             }
 
             item {
+                SectionHeader(
+                    title = "Saved drawings",
+                    subtitle = "Open and review the drawings you completed"
+                )
+            }
+
+            if (!isLoading && savedDrawings.isEmpty()) {
+                item {
+                    EmptyStateCard("You have no saved drawings yet.")
+                }
+            }
+
+            items(savedDrawings, key = { it.id }) { drawing ->
+                SavedDrawingCard(drawing = drawing, onOpen = { onOpenSavedDrawing(drawing.roomCode) })
+            }
+
+            item {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    Column {
-                        Text("Phòng public", fontWeight = FontWeight.Bold, fontSize = 18.sp)
-                        Text(
-                            "Hiển thị các phòng đang chờ người chơi thứ 2",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
+                    SectionHeader(
+                        title = "Public rooms",
+                        subtitle = "Rooms waiting for a second player"
+                    )
                     if (isLoading) {
                         CircularProgressIndicator(modifier = Modifier.width(24.dp), strokeWidth = 2.dp)
                     }
@@ -122,9 +140,7 @@ fun HomeScreen(
             if (errorMessage != null) {
                 item {
                     Card(
-                        colors = CardDefaults.cardColors(
-                            containerColor = MaterialTheme.colorScheme.errorContainer
-                        )
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer)
                     ) {
                         Text(
                             text = errorMessage.orEmpty(),
@@ -137,25 +153,57 @@ fun HomeScreen(
 
             if (!isLoading && publicRooms.isEmpty()) {
                 item {
-                    Card(
-                        colors = CardDefaults.cardColors(
-                            containerColor = MaterialTheme.colorScheme.surfaceVariant
-                        )
-                    ) {
-                        Text(
-                            text = "Chưa có phòng public nào đang chờ. Bạn có thể tạo một phòng mới.",
-                            modifier = Modifier.padding(16.dp),
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
+                    EmptyStateCard("No public room is waiting right now. Create one to get started.")
                 }
             }
 
             items(publicRooms, key = { it.id }) { room ->
-                PublicRoomCard(
-                    room = room,
-                    onJoin = { onNavigateToRoom(room.roomCode) }
-                )
+                PublicRoomCard(room = room, onJoin = { onNavigateToRoom(room.roomCode) })
+            }
+        }
+    }
+}
+
+@Composable
+private fun SectionHeader(title: String, subtitle: String) {
+    Column {
+        Text(title, fontWeight = FontWeight.Bold, fontSize = 18.sp)
+        Text(
+            subtitle,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+    }
+}
+
+@Composable
+private fun EmptyStateCard(message: String) {
+    Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)) {
+        Text(
+            text = message,
+            modifier = Modifier.padding(16.dp),
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+    }
+}
+
+@Composable
+private fun SavedDrawingCard(
+    drawing: CompletedDrawing,
+    onOpen: () -> Unit
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.tertiaryContainer)
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text("Room: ${drawing.roomCode}", fontWeight = FontWeight.Bold)
+            Spacer(Modifier.height(4.dp))
+            Text("Saved by: ${drawing.savedByUsername}")
+            Text("Strokes: ${drawing.strokeCount}")
+            Spacer(Modifier.height(12.dp))
+            OutlinedButton(onClick = onOpen, modifier = Modifier.fillMaxWidth()) {
+                Text("Open drawing")
             }
         }
     }

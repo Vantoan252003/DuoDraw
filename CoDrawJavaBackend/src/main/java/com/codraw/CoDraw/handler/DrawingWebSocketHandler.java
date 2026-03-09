@@ -27,6 +27,14 @@ import java.util.concurrent.ConcurrentHashMap;
 @Component
 public class DrawingWebSocketHandler extends TextWebSocketHandler {
 
+    private static final Set<String> RELAY_ONLY_TYPES = Set.of(
+            "STROKE_PREVIEW",
+            "COMPLETE_REQUEST",
+            "COMPLETE_RESPONSE",
+            "COMPLETE_FINALIZED",
+            "COMPLETE_CANCELLED"
+    );
+
     // roomCode -> Set<session>
     private final Map<String, Set<WebSocketSession>> rooms = new ConcurrentHashMap<>();
     // sessionId -> roomCode
@@ -74,6 +82,11 @@ public class DrawingWebSocketHandler extends TextWebSocketHandler {
         Map<String, Object> map = objectMapper.readValue(payload, Map.class);
         String type = map.getOrDefault("type", "STROKE").toString();
 
+        if ("JOIN".equals(type)) {
+            // Da xu ly trong afterConnectionEstablished, bo qua
+            return;
+        }
+
         if ("CLEAR".equals(type)) {
             // Xoa canvas trong Redis va broadcast cho tat ca
             canvasStateService.clearStrokes(roomCode);
@@ -81,15 +94,18 @@ public class DrawingWebSocketHandler extends TextWebSocketHandler {
             return;
         }
 
-        if ("JOIN".equals(type)) {
-            // Da xu ly trong afterConnectionEstablished, bo qua
+        if (RELAY_ONLY_TYPES.contains(type)) {
+            // CHO PHÉP CHỈ ĐƯA TIN NHẮN ĐẾN KHÁCH HÀNG KHÁC
+            broadcast(roomCode, session, payload, true); // chi broadcast cho nguoi khac
             return;
         }
 
         // STROKE default: luu vao Redis va broadcast
         StrokeMessage stroke = objectMapper.readValue(payload, StrokeMessage.class);
+        stroke.setType(type);
+        stroke.setPreview(false);
         canvasStateService.addStroke(roomCode, stroke);
-        broadcast(roomCode, session, payload, true); // chi broadcast cho nguoi khac
+        broadcast(roomCode, session, objectMapper.writeValueAsString(stroke), true); // chi broadcast cho nguoi khac
     }
 
     @Override

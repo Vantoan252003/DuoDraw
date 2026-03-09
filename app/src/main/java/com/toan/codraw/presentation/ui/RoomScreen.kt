@@ -23,7 +23,7 @@ import com.toan.codraw.presentation.viewmodel.RoomViewModel
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RoomScreen(
-    onRoomReady: (roomCode: String, playerId: Int) -> Unit,
+    onRoomReady: (roomCode: String, playerId: Int, playerCount: Int) -> Unit,
     onNavigateBack: () -> Unit,
     initialJoinCode: String = "",
     viewModel: RoomViewModel = hiltViewModel()
@@ -40,7 +40,7 @@ fun RoomScreen(
         if (uiState is RoomUiState.Success) {
             val room = (uiState as RoomUiState.Success).room
             val playerId = if (room.hostUsername == viewModel.username) 1 else 2
-            onRoomReady(room.roomCode, playerId)
+            onRoomReady(room.roomCode, playerId, room.playerCount)
         }
     }
 
