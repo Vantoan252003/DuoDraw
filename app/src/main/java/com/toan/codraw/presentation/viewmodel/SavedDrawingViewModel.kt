@@ -1,5 +1,6 @@
 package com.toan.codraw.presentation.viewmodel
 
+import android.graphics.Color as AndroidColor
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.lifecycle.SavedStateHandle
@@ -63,6 +64,7 @@ class SavedDrawingViewModel @Inject constructor(
     }
 
     private fun toStrokeUi(stroke: com.toan.codraw.domain.model.Stroke): StrokeUi = StrokeUi(
+        id = stroke.id,
         path = Path().apply {
             stroke.points.forEachIndexed { index, point ->
                 if (index == 0) moveTo(point.x, point.y) else lineTo(point.x, point.y)
@@ -75,10 +77,9 @@ class SavedDrawingViewModel @Inject constructor(
 
     private fun parseColor(hex: String): Color {
         return try {
-            Color(hex.trimStart('#').toLong(16).toInt())
+            Color(AndroidColor.parseColor(hex))
         } catch (_: Exception) {
             Color.Black
         }
     }
 }
-

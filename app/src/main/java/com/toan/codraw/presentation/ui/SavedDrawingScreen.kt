@@ -1,5 +1,4 @@
 package com.toan.codraw.presentation.ui
-
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
@@ -21,6 +20,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.res.stringResource
+import com.toan.codraw.R
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -43,10 +44,10 @@ fun SavedDrawingScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Saved drawing", fontWeight = FontWeight.Bold) },
+                title = { Text(stringResource(R.string.saved_drawing_title), fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -79,9 +80,9 @@ fun SavedDrawingScreen(
             }
 
             drawing?.let { saved ->
-                Text("Room: ${saved.roomCode}", fontWeight = FontWeight.Bold, fontSize = 20.sp)
-                Text("Saved by: ${saved.savedByUsername}")
-                Text("Completed at: ${saved.completedAt}")
+                Text(stringResource(R.string.room_code, saved.roomCode), fontWeight = FontWeight.Bold, fontSize = 20.sp)
+                Text(stringResource(R.string.saved_by, saved.savedByUsername))
+                Text(stringResource(R.string.completed_at, saved.completedAt))
                 Spacer(Modifier.height(8.dp))
 
                 Column(modifier = Modifier.weight(1f)) {

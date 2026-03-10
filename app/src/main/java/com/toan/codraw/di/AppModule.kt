@@ -4,13 +4,16 @@ import com.google.gson.Gson
 import com.google.gson.GsonBuilder
 import com.toan.codraw.data.local.SessionManager
 import com.toan.codraw.data.remote.ApiService
+import com.toan.codraw.data.remote.BaseUrlInterceptor
 import com.toan.codraw.data.remote.DrawingWebSocketListener
 import com.toan.codraw.data.remote.WebSocketManager
 import com.toan.codraw.data.repository.AuthRepositoryImpl
 import com.toan.codraw.data.repository.DrawingRepositoryImpl
+import com.toan.codraw.data.repository.ProfileRepositoryImpl
 import com.toan.codraw.data.repository.RoomRepositoryImpl
 import com.toan.codraw.domain.repository.AuthRepository
 import com.toan.codraw.domain.repository.DrawingRepository
+import com.toan.codraw.domain.repository.ProfileRepository
 import com.toan.codraw.domain.repository.RoomRepository
 import dagger.Binds
 import dagger.Module
@@ -34,11 +37,12 @@ object NetworkModule {
 
     @Provides
     @Singleton
-    fun provideOkHttpClient(): OkHttpClient {
+    fun provideOkHttpClient(baseUrlInterceptor: BaseUrlInterceptor): OkHttpClient {
         val logging = HttpLoggingInterceptor().apply {
             level = HttpLoggingInterceptor.Level.BODY
         }
         return OkHttpClient.Builder()
+            .addInterceptor(baseUrlInterceptor)
             .addInterceptor(logging)
             .readTimeout(30, TimeUnit.SECONDS)
             .writeTimeout(30, TimeUnit.SECONDS)
@@ -48,11 +52,11 @@ object NetworkModule {
 
     @Provides
     @Singleton
-    fun provideRetrofit(okHttpClient: OkHttpClient, gson: Gson, sessionManager: SessionManager): Retrofit {
+    fun provideRetrofit(okHttpClient: OkHttpClient): Retrofit {
         return Retrofit.Builder()
-            .baseUrl(sessionManager.getBaseUrl())
+            .baseUrl(SessionManager.DEFAULT_BASE_URL)
             .client(okHttpClient)
-            .addConverterFactory(GsonConverterFactory.create(gson))
+            .addConverterFactory(GsonConverterFactory.create())
             .build()
     }
 
@@ -89,4 +93,8 @@ abstract class RepositoryModule {
     @Binds
     @Singleton
     abstract fun bindRoomRepository(impl: RoomRepositoryImpl): RoomRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindProfileRepository(impl: ProfileRepositoryImpl): ProfileRepository
 }

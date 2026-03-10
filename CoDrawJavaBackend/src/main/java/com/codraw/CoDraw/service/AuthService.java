@@ -37,10 +37,18 @@ public class AuthService {
                 request.getEmail(),
                 passwordEncoder.encode(request.getPassword())
         );
+        user.setDisplayName(request.getUsername());
         userRepository.save(user);
 
         String token = jwtUtils.generateToken(user.getUsername());
-        return new AuthResponse(token, user.getUsername(), user.getEmail(), "Đăng ký thành công!");
+        return new AuthResponse(
+                token,
+                user.getUsername(),
+                user.getEmail(),
+                user.getDisplayName(),
+                user.getAvatarUrl(),
+                "Đăng ký thành công!"
+        );
     }
 
     public AuthResponse login(LoginRequest request) {
@@ -51,8 +59,19 @@ public class AuthService {
             throw new RuntimeException("Mật khẩu không đúng!");
         }
 
+        if (user.getDisplayName() == null || user.getDisplayName().isBlank()) {
+            user.setDisplayName(user.getUsername());
+            userRepository.save(user);
+        }
+
         String token = jwtUtils.generateToken(user.getUsername());
-        return new AuthResponse(token, user.getUsername(), user.getEmail(), "Đăng nhập thành công!");
+        return new AuthResponse(
+                token,
+                user.getUsername(),
+                user.getEmail(),
+                user.getDisplayName(),
+                user.getAvatarUrl(),
+                "Đăng nhập thành công!"
+        );
     }
 }
-

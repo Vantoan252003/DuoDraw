@@ -19,6 +19,15 @@ class SessionManager @Inject constructor(
     fun saveUsername(username: String) = prefs.edit().putString(KEY_USERNAME, username).apply()
     fun getUsername(): String? = prefs.getString(KEY_USERNAME, null)
 
+    fun saveDisplayName(displayName: String) = prefs.edit().putString(KEY_DISPLAY_NAME, displayName).apply()
+    fun getDisplayName(): String? = prefs.getString(KEY_DISPLAY_NAME, getUsername())
+
+    fun saveAvatarUrl(avatarUrl: String?) = prefs.edit().putString(KEY_AVATAR_URL, avatarUrl).apply()
+    fun getAvatarUrl(): String? = prefs.getString(KEY_AVATAR_URL, null)
+
+    fun saveLanguageTag(languageTag: String) = prefs.edit().putString(KEY_LANGUAGE_TAG, languageTag).apply()
+    fun getLanguageTag(): String = prefs.getString(KEY_LANGUAGE_TAG, DEFAULT_LANGUAGE_TAG) ?: DEFAULT_LANGUAGE_TAG
+
     fun saveBaseUrl(url: String) = prefs.edit().putString(KEY_BASE_URL, url).apply()
     fun getBaseUrl(): String {
         val saved = prefs.getString(KEY_BASE_URL, null)
@@ -39,14 +48,23 @@ class SessionManager @Inject constructor(
 
     fun isLoggedIn(): Boolean = getToken() != null
 
-    fun logout() = prefs.edit().clear().apply()
+    fun logout() {
+        val baseUrl = getBaseUrl()
+        val languageTag = getLanguageTag()
+        prefs.edit().clear().apply()
+        saveBaseUrl(baseUrl)
+        saveLanguageTag(languageTag)
+    }
 
     companion object {
         private const val KEY_TOKEN = "jwt_token"
         private const val KEY_USERNAME = "username"
+        private const val KEY_DISPLAY_NAME = "display_name"
+        private const val KEY_AVATAR_URL = "avatar_url"
+        private const val KEY_LANGUAGE_TAG = "language_tag"
         private const val KEY_BASE_URL = "base_url"
 
-        const val DEFAULT_BASE_URL = "http://192.168.0.105:8080/"
+        private const val DEFAULT_LANGUAGE_TAG = "vi"
+        const val DEFAULT_BASE_URL = "http://192.168.0.106:8080/"
     }
 }
-

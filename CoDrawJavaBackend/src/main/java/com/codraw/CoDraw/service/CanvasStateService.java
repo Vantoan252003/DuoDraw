@@ -7,6 +7,7 @@ import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -62,6 +63,42 @@ public class CanvasStateService {
         redisTemplate.delete(key(roomCode));
     }
 
+    /** Xoa stroke cuoi cung cua nguoi choi trong phong */
+    public StrokeMessage removeLastStrokeForPlayer(String roomCode, int playerId) {
+        String redisKey = key(roomCode);
+        List<Object> raw = redisTemplate.opsForList().range(redisKey, 0, -1);
+        if (raw == null || raw.isEmpty()) {
+            return null;
+        }
+
+        List<StrokeMessage> strokes = new ArrayList<>();
+        for (Object item : raw) {
+            StrokeMessage message = fromJson(item.toString());
+            if (message != null) {
+                strokes.add(message);
+            }
+        }
+
+        for (int index = strokes.size() - 1; index >= 0; index--) {
+            StrokeMessage stroke = strokes.get(index);
+            if (stroke.getPlayerId() == playerId && !stroke.isPreview()) {
+                strokes.remove(index);
+                redisTemplate.delete(redisKey);
+                for (StrokeMessage remaining : strokes) {
+                    String json = toJson(remaining);
+                    if (Objects.nonNull(json)) {
+                        redisTemplate.opsForList().rightPush(redisKey, json);
+                    }
+                }
+                if (!strokes.isEmpty()) {
+                    redisTemplate.expire(redisKey, TTL_HOURS, TimeUnit.HOURS);
+                }
+                return stroke;
+            }
+        }
+        return null;
+    }
+
     private String toJson(Object obj) {
         try { return objectMapper.writeValueAsString(obj); }
         catch (Exception e) { return null; }
@@ -72,4 +109,3 @@ public class CanvasStateService {
         catch (Exception e) { return null; }
     }
 }
-

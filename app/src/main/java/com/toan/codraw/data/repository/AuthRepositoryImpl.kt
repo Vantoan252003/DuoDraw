@@ -18,7 +18,16 @@ class AuthRepositoryImpl @Inject constructor(
             val response = apiService.login(LoginRequest(username, password))
             if (response.isSuccessful) {
                 val body = response.body()!!
-                Result.success(AuthResult(body.token, body.username, body.email, body.message))
+                Result.success(
+                    AuthResult(
+                        token = body.token,
+                        username = body.username,
+                        email = body.email,
+                        displayName = body.displayName,
+                        avatarUrl = body.avatarUrl,
+                        message = body.message
+                    )
+                )
             } else {
                 val errorMsg = response.errorBody()?.string()
                     ?.let { parseErrorMessage(it) } ?: "Đăng nhập thất bại (${response.code()})"
@@ -34,7 +43,16 @@ class AuthRepositoryImpl @Inject constructor(
             val response = apiService.register(RegisterRequest(username, email, password))
             if (response.isSuccessful) {
                 val body = response.body()!!
-                Result.success(AuthResult(body.token, body.username, body.email, body.message))
+                Result.success(
+                    AuthResult(
+                        token = body.token,
+                        username = body.username,
+                        email = body.email,
+                        displayName = body.displayName,
+                        avatarUrl = body.avatarUrl,
+                        message = body.message
+                    )
+                )
             } else {
                 val errorMsg = response.errorBody()?.string()
                     ?.let { parseErrorMessage(it) } ?: "Đăng ký thất bại (${response.code()})"
@@ -56,4 +74,3 @@ class AuthRepositoryImpl @Inject constructor(
         }
     }
 }
-

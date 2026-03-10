@@ -26,10 +26,16 @@ public class User {
     @Column(nullable = false)
     private String password;
 
+    @Column(length = 80)
+    private String displayName;
+
+    @Column(length = 512)
+    private String avatarUrl;
+
     public User(String username, String email, String password) {
         this.username = username;
         this.email = email;
         this.password = password;
+        this.displayName = username;
     }
 }
-

@@ -13,6 +13,7 @@ import com.toan.codraw.presentation.ui.LoginScreen
 import com.toan.codraw.presentation.ui.RegisterScreen
 import com.toan.codraw.presentation.ui.RoomScreen
 import com.toan.codraw.presentation.ui.SavedDrawingScreen
+import com.toan.codraw.presentation.ui.SettingsScreen
 import com.toan.codraw.presentation.viewmodel.AuthViewModel
 
 @Composable
@@ -20,12 +21,9 @@ fun NavGraph() {
     val navController = rememberNavController()
     val authViewModel: AuthViewModel = hiltViewModel()
 
-    // Kiểm tra đã đăng nhập chưa để chọn màn hình đầu
     val startDestination = if (authViewModel.isAlreadyLoggedIn()) "home" else "login"
 
     NavHost(navController = navController, startDestination = startDestination) {
-
-        // ── Login ──��───────────────────────────────────────────────────────
         composable("login") {
             LoginScreen(
                 onLoginSuccess = {
@@ -40,7 +38,6 @@ fun NavGraph() {
             )
         }
 
-        // ── Register ───────────────────────────────────────────────────────
         composable("register") {
             RegisterScreen(
                 onRegisterSuccess = {
@@ -53,15 +50,22 @@ fun NavGraph() {
             )
         }
 
-        // ── Home ───────────────────────────────────────────────────────────
         composable("home") {
             HomeScreen(
                 onNavigateToRoom = { code ->
                     val route = if (code.isNullOrBlank()) "room" else "room?code=$code"
                     navController.navigate(route)
                 },
+                onEnterDrawingRoom = { roomCode, playerId, playerCount ->
+                    navController.navigate("drawing/$roomCode/$playerId/$playerCount") {
+                        launchSingleTop = true
+                    }
+                },
                 onOpenSavedDrawing = { roomCode ->
                     navController.navigate("savedDrawing/$roomCode")
+                },
+                onOpenSettings = {
+                    navController.navigate("settings")
                 },
                 onLogout = {
                     authViewModel.logout()
@@ -72,7 +76,6 @@ fun NavGraph() {
             )
         }
 
-        // ── Room ────────────────────────────────────────────────────────
         composable(
             route = "room?code={code}",
             arguments = listOf(
@@ -88,6 +91,7 @@ fun NavGraph() {
                 onRoomReady = { roomCode, playerId, playerCount ->
                     navController.navigate("drawing/$roomCode/$playerId/$playerCount") {
                         launchSingleTop = true
+                        popUpTo("home") { inclusive = false }
                     }
                 },
                 onNavigateBack = { navController.popBackStack() },
@@ -95,7 +99,6 @@ fun NavGraph() {
             )
         }
 
-        // ── Drawing ────────────────────────────────────────────────────────
         composable(
             route = "drawing/{roomCode}/{playerId}/{playerCount}",
             arguments = listOf(
@@ -115,12 +118,15 @@ fun NavGraph() {
             )
         }
 
-        // ── Saved Drawing ────────────────────────────────────────────────────────
         composable(
             route = "savedDrawing/{roomCode}",
             arguments = listOf(navArgument("roomCode") { type = NavType.StringType })
         ) {
             SavedDrawingScreen(onNavigateBack = { navController.popBackStack() })
+        }
+
+        composable("settings") {
+            SettingsScreen(onNavigateBack = { navController.popBackStack() })
         }
     }
 }

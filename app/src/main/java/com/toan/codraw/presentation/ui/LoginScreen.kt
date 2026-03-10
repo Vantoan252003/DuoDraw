@@ -12,6 +12,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
@@ -20,6 +21,7 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.toan.codraw.R
 import com.toan.codraw.presentation.viewmodel.AuthUiState
 import com.toan.codraw.presentation.viewmodel.AuthViewModel
 
@@ -49,11 +51,17 @@ fun LoginScreen(
         ) {
             Spacer(Modifier.height(40.dp))
 
-            Text("CoDraw", fontSize = 34.sp, fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.primary)
-            Text("Draw With Your Friend",
+            Text(
+                stringResource(R.string.app_name),
+                fontSize = 34.sp,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.primary
+            )
+            Text(
+                stringResource(R.string.login_subtitle),
                 style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant)
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
 
             Spacer(Modifier.height(36.dp))
 
@@ -62,7 +70,7 @@ fun LoginScreen(
             OutlinedTextField(
                 value = viewModel.username,
                 onValueChange = { viewModel.username = it },
-                label = { Text("Ten dang nhap") },
+                label = { Text(stringResource(R.string.username)) },
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
                 modifier = Modifier.fillMaxWidth()
@@ -74,7 +82,7 @@ fun LoginScreen(
             OutlinedTextField(
                 value = viewModel.password,
                 onValueChange = { viewModel.password = it },
-                label = { Text("Mat khau") },
+                label = { Text(stringResource(R.string.password)) },
                 singleLine = true,
                 visualTransformation = if (passwordVisible) VisualTransformation.None
                                        else PasswordVisualTransformation(),
@@ -127,18 +135,18 @@ fun LoginScreen(
                         color = MaterialTheme.colorScheme.onPrimary
                     )
                     Spacer(Modifier.width(8.dp))
-                    Text("Dang dang nhap...")
+                    Text(stringResource(R.string.logging_in))
                 } else {
-                    Text("Dang nhap", fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+                    Text(stringResource(R.string.login), fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
                 }
             }
 
             Spacer(Modifier.height(12.dp))
 
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("Chua co tai khoan?", style = MaterialTheme.typography.bodyMedium)
+                Text(stringResource(R.string.no_account), style = MaterialTheme.typography.bodyMedium)
                 TextButton(onClick = onNavigateToRegister) {
-                    Text("Dang ky ngay", fontWeight = FontWeight.Bold)
+                    Text(stringResource(R.string.register_now), fontWeight = FontWeight.Bold)
                 }
             }
 

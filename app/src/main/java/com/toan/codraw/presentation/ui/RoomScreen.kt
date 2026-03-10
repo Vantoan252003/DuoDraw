@@ -10,6 +10,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
@@ -17,6 +18,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.toan.codraw.R
 import com.toan.codraw.presentation.viewmodel.RoomUiState
 import com.toan.codraw.presentation.viewmodel.RoomViewModel
 
@@ -33,6 +35,7 @@ fun RoomScreen(
     LaunchedEffect(initialJoinCode) {
         if (initialJoinCode.isNotBlank()) {
             viewModel.updateJoinCode(initialJoinCode)
+            viewModel.joinRoom()
         }
     }
 
@@ -47,10 +50,10 @@ fun RoomScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Phong ve", fontWeight = FontWeight.Bold) },
+                title = { Text(stringResource(R.string.drawing_room), fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.back))
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -69,12 +72,12 @@ fun RoomScreen(
         ) {
 
             Text(
-                "Xin chao, ${viewModel.username}!",
+                stringResource(R.string.home_greeting, viewModel.username),
                 fontSize = 18.sp,
                 fontWeight = FontWeight.SemiBold
             )
             Text(
-                "Tao phong moi hoac tham gia phong co san",
+                stringResource(R.string.home_subtitle),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center
@@ -95,14 +98,14 @@ fun RoomScreen(
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Text(
-                        "Tao phong moi",
+                        stringResource(R.string.create_room_title),
                         fontWeight = FontWeight.Bold,
                         fontSize = 16.sp,
                         color = MaterialTheme.colorScheme.onPrimaryContainer
                     )
                     Spacer(Modifier.height(8.dp))
                     Text(
-                        "Ban la chu phong (Player 1), chia ma phong cho ban ve",
+                        stringResource(R.string.create_room_description),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f),
                         textAlign = TextAlign.Center
@@ -112,12 +115,12 @@ fun RoomScreen(
                         FilterChip(
                             selected = viewModel.selectedRoomType == "PUBLIC",
                             onClick = { viewModel.updateSelectedRoomType("PUBLIC") },
-                            label = { Text("Public") }
+                            label = { Text(stringResource(R.string.public_room)) }
                         )
                         FilterChip(
                             selected = viewModel.selectedRoomType == "PRIVATE",
                             onClick = { viewModel.updateSelectedRoomType("PRIVATE") },
-                            label = { Text("Private") }
+                            label = { Text(stringResource(R.string.private_room)) }
                         )
                     }
                     Spacer(Modifier.height(12.dp))
@@ -134,7 +137,16 @@ fun RoomScreen(
                             )
                             Spacer(Modifier.width(8.dp))
                         }
-                        Text("Tao phong ${viewModel.selectedRoomType.lowercase()}")
+                        Text(
+                            stringResource(
+                                R.string.create_room_button,
+                                if (viewModel.selectedRoomType == "PUBLIC") {
+                                    stringResource(R.string.public_room).lowercase()
+                                } else {
+                                    stringResource(R.string.private_room).lowercase()
+                                }
+                            )
+                        )
                     }
                 }
             }
@@ -144,7 +156,7 @@ fun RoomScreen(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 HorizontalDivider(modifier = Modifier.weight(1f))
                 Text(
-                    "  hoac  ",
+                    "  ${stringResource(R.string.or_label)}  ",
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.outline
                 )
@@ -166,14 +178,14 @@ fun RoomScreen(
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Text(
-                        "Tham gia phong",
+                        stringResource(R.string.join_room_title),
                         fontWeight = FontWeight.Bold,
                         fontSize = 16.sp,
                         color = MaterialTheme.colorScheme.onSecondaryContainer
                     )
                     Spacer(Modifier.height(8.dp))
                     Text(
-                        "Nhap ma phong 6 ky tu tu ban ve",
+                        stringResource(R.string.join_room_description),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.7f)
                     )
@@ -181,7 +193,7 @@ fun RoomScreen(
                     OutlinedTextField(
                         value = viewModel.joinCode,
                         onValueChange = viewModel::updateJoinCode,
-                        label = { Text("Ma phong (VD: ABC123)") },
+                        label = { Text(stringResource(R.string.join_room_hint)) },
                         singleLine = true,
                         keyboardOptions = KeyboardOptions(
                             capitalization = KeyboardCapitalization.Characters,
@@ -206,7 +218,7 @@ fun RoomScreen(
                             )
                             Spacer(Modifier.width(8.dp))
                         }
-                        Text("Tham gia")
+                        Text(if (initialJoinCode.isNotBlank()) stringResource(R.string.joining_room_button) else stringResource(R.string.join_room_button))
                     }
                 }
             }

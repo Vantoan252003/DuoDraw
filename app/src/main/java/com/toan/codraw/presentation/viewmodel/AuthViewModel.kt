@@ -40,6 +40,7 @@ class AuthViewModel @Inject constructor(
 
     fun isAlreadyLoggedIn(): Boolean = sessionManager.isLoggedIn()
     fun getSavedUsername(): String = sessionManager.getUsername() ?: ""
+    fun getSavedDisplayName(): String = sessionManager.getDisplayName() ?: getSavedUsername()
 
     fun login() {
         if (username.isBlank() || password.isBlank()) {
@@ -55,6 +56,8 @@ class AuthViewModel @Inject constructor(
                 onSuccess = { auth ->
                     sessionManager.saveToken(auth.token)
                     sessionManager.saveUsername(auth.username)
+                    sessionManager.saveDisplayName(auth.displayName)
+                    sessionManager.saveAvatarUrl(auth.avatarUrl)
                     _uiState.value = AuthUiState.Success(auth.username)
                 },
                 onFailure = { e ->
@@ -85,6 +88,8 @@ class AuthViewModel @Inject constructor(
                 onSuccess = { auth ->
                     sessionManager.saveToken(auth.token)
                     sessionManager.saveUsername(auth.username)
+                    sessionManager.saveDisplayName(auth.displayName)
+                    sessionManager.saveAvatarUrl(auth.avatarUrl)
                     _uiState.value = AuthUiState.Success(auth.username)
                 },
                 onFailure = { e ->
@@ -107,4 +112,3 @@ class AuthViewModel @Inject constructor(
         _uiState.value = AuthUiState.Idle
     }
 }
-

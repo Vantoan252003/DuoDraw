@@ -1,27 +1,51 @@
 // presentation/ui/DrawingScreen.kt
 package com.toan.codraw.presentation.ui
 
+import android.app.Activity
+import android.content.Context
+import android.content.ContextWrapper
+import android.content.pm.ActivityInfo
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material3.*
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.toan.codraw.R
 import com.toan.codraw.presentation.components.DrawingCanvas
 import com.toan.codraw.presentation.components.DrawingTools
 import com.toan.codraw.presentation.viewmodel.DrawingViewModel
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DrawingScreen(
     roomCode: String = "",
@@ -30,7 +54,9 @@ fun DrawingScreen(
     onNavigateBack: () -> Unit = {},
     viewModel: DrawingViewModel = hiltViewModel()
 ) {
-    // Ket noi WS ngay khi vao man hinh
+    val context = LocalContext.current
+    val activity = remember(context) { context.findActivity() }
+
     LaunchedEffect(roomCode, localPlayerId, playerCount) {
         if (roomCode.isNotBlank()) {
             viewModel.connect(roomCode, localPlayerId, playerCount)
@@ -42,6 +68,18 @@ fun DrawingScreen(
     DisposableEffect(Unit) {
         onDispose { viewModel.disconnect() }
     }
+
+    DisposableEffect(activity) {
+        val previousOrientation = activity?.requestedOrientation
+        activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
+        onDispose {
+            if (previousOrientation != null) {
+                activity.requestedOrientation = previousOrientation
+            }
+        }
+    }
+
+    BackHandler(onBack = onNavigateBack)
 
     val currentPath1 by viewModel.currentPath1
     val currentPath2 by viewModel.currentPath2
@@ -62,164 +100,200 @@ fun DrawingScreen(
             onDismissRequest = { viewModel.respondToCompletionRequest(false) },
             confirmButton = {
                 TextButton(onClick = { viewModel.respondToCompletionRequest(true) }) {
-                    Text("Agree")
+                    Text(stringResource(R.string.agree))
                 }
             },
             dismissButton = {
                 TextButton(onClick = { viewModel.respondToCompletionRequest(false) }) {
-                    Text("Decline")
+                    Text(stringResource(R.string.decline))
                 }
             },
-            title = { Text("Complete drawing?") },
-            text = { Text("Player 1 wants to complete and save this drawing. Do you agree?") }
+            title = { Text(stringResource(R.string.complete_drawing_prompt_title)) },
+            text = { Text(stringResource(R.string.complete_drawing_prompt_message)) }
         )
     }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = {
-                    Column {
-                        Text("CoDraw", fontWeight = FontWeight.Bold)
-                        if (roomCode.isNotBlank()) {
-                            Text(
-                                "Room: $roomCode",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
-                            )
-                        }
-                    }
-                },
-                navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back")
-                    }
-                },
-                actions = {
-                    if (roomCode.isNotBlank()) {
-                        Button(
-                            onClick = viewModel::onCompleteClicked,
-                            enabled = viewModel.canRequestCompletion,
-                            modifier = Modifier.padding(end = 8.dp)
-                        ) {
-                            if (isCompleting) {
-                                CircularProgressIndicator(
-                                    modifier = Modifier.size(16.dp),
-                                    strokeWidth = 2.dp,
-                                    color = MaterialTheme.colorScheme.onPrimary
-                                )
-                                Spacer(Modifier.width(8.dp))
-                            }
-                            Text(
-                                when {
-                                    isCompleted -> "Completed"
-                                    awaitingGuestApproval -> "Pending"
-                                    else -> "Complete"
-                                }
-                            )
-                        }
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer
-                )
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background)
+    ) {
+        Row(modifier = Modifier.fillMaxSize()) {
+            CanvasPane(
+                strokes = viewModel.player1Strokes,
+                currentPath = currentPath1,
+                currentPathColor = currentPathColor1,
+                currentStrokeWidth = currentPathWidth1,
+                isCurrentPathEraserMode = currentPathEraser1,
+                isInputEnabled = localPlayerId == 1 && !isCompleted,
+                isLocalPane = localPlayerId == 1,
+                onDragStart = viewModel::startDrawing,
+                onDrag = viewModel::updateDrawing,
+                onDragEnd = viewModel::finishDrawing,
+                modifier = Modifier.weight(1f)
+            )
+            CanvasPane(
+                strokes = viewModel.player2Strokes,
+                currentPath = currentPath2,
+                currentPathColor = currentPathColor2,
+                currentStrokeWidth = currentPathWidth2,
+                isCurrentPathEraserMode = currentPathEraser2,
+                isInputEnabled = localPlayerId == 2 && !isCompleted,
+                isLocalPane = localPlayerId == 2,
+                onDragStart = viewModel::startDrawing,
+                onDrag = viewModel::updateDrawing,
+                onDragEnd = viewModel::finishDrawing,
+                modifier = Modifier.weight(1f)
             )
         }
-    ) { innerPadding ->
-        Column(
+
+        Row(
             modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
+                .fillMaxWidth()
+                .statusBarsPadding()
+                .padding(horizontal = 12.dp, vertical = 10.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            if (completionMessage != null) {
-                Card(
-                    colors = CardDefaults.cardColors(
-                        containerColor = if (isCompleted) {
-                            MaterialTheme.colorScheme.primaryContainer
-                        } else {
-                            MaterialTheme.colorScheme.errorContainer
-                        }
-                    ),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(12.dp)
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Surface(
+                    shape = MaterialTheme.shapes.large,
+                    tonalElevation = 6.dp,
+                    shadowElevation = 4.dp,
+                    color = MaterialTheme.colorScheme.surface.copy(alpha = 0.94f)
+                ) {
+                    IconButton(onClick = onNavigateBack) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
+                    }
+                }
+                Surface(
+                    shape = MaterialTheme.shapes.large,
+                    tonalElevation = 6.dp,
+                    color = MaterialTheme.colorScheme.surface.copy(alpha = 0.94f)
                 ) {
                     Text(
-                        text = completionMessage.orEmpty(),
-                        modifier = Modifier.padding(12.dp),
-                        color = if (isCompleted) {
-                            MaterialTheme.colorScheme.onPrimaryContainer
+                        text = if (roomCode.isBlank()) {
+                            stringResource(R.string.offline_player, localPlayerId)
                         } else {
-                            MaterialTheme.colorScheme.onErrorContainer
-                        }
+                            stringResource(R.string.room_player, roomCode, localPlayerId)
+                        },
+                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
+                        fontWeight = FontWeight.SemiBold
                     )
                 }
             }
 
-            // ── Player 1 pane (top) ───────────────────────────────────────
-            Column(modifier = Modifier.weight(1f)) {
-                PlayerLabel("Player 1", localPlayerId == 1, MaterialTheme.colorScheme.primary)
-                Box(modifier = Modifier.weight(1f)) {
-                    DrawingCanvas(
-                        strokes = viewModel.player1Strokes,
-                        currentPath = currentPath1,
-                        currentPathColor = currentPathColor1,
-                        currentStrokeWidth = currentPathWidth1,
-                        isCurrentPathEraserMode = currentPathEraser1,
-                        onDragStart = viewModel::startDrawing,
-                        onDrag = viewModel::updateDrawing,
-                        onDragEnd = viewModel::finishDrawing,
-                        isInputEnabled = localPlayerId == 1 && !isCompleted
-                    )
+            if (roomCode.isNotBlank()) {
+                Button(onClick = viewModel::onCompleteClicked, enabled = viewModel.canRequestCompletion) {
+                    if (isCompleting) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(16.dp),
+                            strokeWidth = 2.dp,
+                            color = MaterialTheme.colorScheme.onPrimary
+                        )
+                    } else {
+                        Text(
+                            when {
+                                isCompleted -> stringResource(R.string.completed)
+                                awaitingGuestApproval -> stringResource(R.string.pending)
+                                else -> stringResource(R.string.complete)
+                            }
+                        )
+                    }
                 }
-                if (localPlayerId == 1) DrawingTools(viewModel = viewModel)
             }
+        }
 
-            HorizontalDivider(thickness = 2.dp, color = MaterialTheme.colorScheme.outline)
-
-            // ── Player 2 pane (bottom) ────────────────────────────────────
-            Column(modifier = Modifier.weight(1f)) {
-                PlayerLabel("Player 2", localPlayerId == 2, MaterialTheme.colorScheme.secondary)
-                Box(modifier = Modifier.weight(1f)) {
-                    DrawingCanvas(
-                        strokes = viewModel.player2Strokes,
-                        currentPath = currentPath2,
-                        currentPathColor = currentPathColor2,
-                        currentStrokeWidth = currentPathWidth2,
-                        isCurrentPathEraserMode = currentPathEraser2,
-                        onDragStart = viewModel::startDrawing,
-                        onDrag = viewModel::updateDrawing,
-                        onDragEnd = viewModel::finishDrawing,
-                        isInputEnabled = localPlayerId == 2 && !isCompleted
-                    )
-                }
-                if (localPlayerId == 2) DrawingTools(viewModel = viewModel)
+        if (completionMessage != null) {
+            Card(
+                colors = CardDefaults.cardColors(
+                    containerColor = if (isCompleted) {
+                        MaterialTheme.colorScheme.primaryContainer
+                    } else {
+                        MaterialTheme.colorScheme.errorContainer
+                    }
+                ),
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .statusBarsPadding()
+                    .padding(top = 72.dp, start = 16.dp, end = 16.dp)
+            ) {
+                Text(
+                    text = completionMessage.orEmpty(),
+                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
+                    color = if (isCompleted) {
+                        MaterialTheme.colorScheme.onPrimaryContainer
+                    } else {
+                        MaterialTheme.colorScheme.onErrorContainer
+                    }
+                )
             }
+        }
+
+        if (!isCompleted) {
+            DrawingTools(
+                viewModel = viewModel,
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .navigationBarsPadding()
+                    .fillMaxWidth(0.92f)
+                    .padding(bottom = 12.dp)
+            )
         }
     }
 }
 
 @Composable
-private fun PlayerLabel(label: String, isLocalPlayer: Boolean, color: Color) {
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(color.copy(alpha = 0.1f))
-            .padding(horizontal = 12.dp, vertical = 4.dp)
-    ) {
-        Text(label, color = color, fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
-        if (isLocalPlayer) {
-            Spacer(Modifier.width(6.dp))
-            Surface(shape = MaterialTheme.shapes.extraSmall, color = color.copy(alpha = 0.2f)) {
+private fun CanvasPane(
+    strokes: List<com.toan.codraw.presentation.viewmodel.StrokeUi>,
+    currentPath: androidx.compose.ui.graphics.Path,
+    currentPathColor: androidx.compose.ui.graphics.Color,
+    currentStrokeWidth: Float,
+    isCurrentPathEraserMode: Boolean,
+    isInputEnabled: Boolean,
+    isLocalPane: Boolean,
+    onDragStart: (Float, Float) -> Unit,
+    onDrag: (Float, Float) -> Unit,
+    onDragEnd: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Box(modifier = modifier.fillMaxSize()) {
+        DrawingCanvas(
+            strokes = strokes,
+            currentPath = currentPath,
+            currentPathColor = currentPathColor,
+            currentStrokeWidth = currentStrokeWidth,
+            isCurrentPathEraserMode = isCurrentPathEraserMode,
+            onDragStart = onDragStart,
+            onDrag = onDrag,
+            onDragEnd = onDragEnd,
+            isInputEnabled = isInputEnabled
+        )
+        if (isLocalPane) {
+            Surface(
+                modifier = Modifier
+                    .align(Alignment.TopStart)
+                    .padding(14.dp),
+                shape = MaterialTheme.shapes.medium,
+                tonalElevation = 4.dp,
+                color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.88f)
+            ) {
                 Text(
-                    "YOU",
-                    color = color,
-                    fontSize = 10.sp,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                    text = stringResource(R.string.you_label),
+                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer
                 )
             }
         }
     }
+}
+
+private tailrec fun Context.findActivity(): Activity? = when (this) {
+    is Activity -> this
+    is ContextWrapper -> baseContext.findActivity()
+    else -> null
 }

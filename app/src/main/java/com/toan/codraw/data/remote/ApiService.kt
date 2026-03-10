@@ -5,13 +5,19 @@ import com.toan.codraw.data.remote.dto.CompleteDrawingRequest
 import com.toan.codraw.data.remote.dto.CompletedDrawingResponse
 import com.toan.codraw.data.remote.dto.CreateRoomRequest
 import com.toan.codraw.data.remote.dto.LoginRequest
+import com.toan.codraw.data.remote.dto.ProfileResponse
 import com.toan.codraw.data.remote.dto.RegisterRequest
 import com.toan.codraw.data.remote.dto.RoomResponse
+import com.toan.codraw.data.remote.dto.UpdateProfileRequest
+import okhttp3.MultipartBody
 import retrofit2.Response
 import retrofit2.http.Body
 import retrofit2.http.GET
 import retrofit2.http.Header
+import retrofit2.http.Multipart
 import retrofit2.http.POST
+import retrofit2.http.PUT
+import retrofit2.http.Part
 import retrofit2.http.Path
 import retrofit2.http.Query
 
@@ -61,4 +67,22 @@ interface ApiService {
         @Header("Authorization") token: String,
         @Body request: CompleteDrawingRequest
     ): Response<CompletedDrawingResponse>
+
+    @GET("api/profile/me")
+    suspend fun getMyProfile(
+        @Header("Authorization") token: String
+    ): Response<ProfileResponse>
+
+    @PUT("api/profile")
+    suspend fun updateProfile(
+        @Header("Authorization") token: String,
+        @Body request: UpdateProfileRequest
+    ): Response<ProfileResponse>
+
+    @Multipart
+    @POST("api/profile/avatar")
+    suspend fun uploadAvatar(
+        @Header("Authorization") token: String,
+        @Part avatar: MultipartBody.Part
+    ): Response<ProfileResponse>
 }

@@ -9,6 +9,7 @@ import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
 import org.springframework.web.socket.handler.TextWebSocketHandler;
 
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -91,6 +92,20 @@ public class DrawingWebSocketHandler extends TextWebSocketHandler {
             // Xoa canvas trong Redis va broadcast cho tat ca
             canvasStateService.clearStrokes(roomCode);
             broadcast(roomCode, session, payload, false); // broadcast ca sender
+            return;
+        }
+
+        if ("UNDO".equals(type)) {
+            // Xu ly tin nhan UNDO: xoa stroke cuoi cua player va thong bao cho tat ca
+            int playerId = ((Number) map.getOrDefault("playerId", 0)).intValue();
+            StrokeMessage removed = canvasStateService.removeLastStrokeForPlayer(roomCode, playerId);
+            if (removed != null) {
+                Map<String, Object> undoPayload = new LinkedHashMap<>();
+                undoPayload.put("type", "UNDO");
+                undoPayload.put("playerId", playerId);
+                undoPayload.put("message", removed.getId());
+                broadcast(roomCode, session, objectMapper.writeValueAsString(undoPayload), false); // broadcast ca sender
+            }
             return;
         }
 

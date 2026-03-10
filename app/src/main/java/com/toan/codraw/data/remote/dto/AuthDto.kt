@@ -15,10 +15,11 @@ data class AuthResponse(
     val token: String,
     val username: String,
     val email: String,
+    val displayName: String,
+    val avatarUrl: String? = null,
     val message: String
 )
 
 data class ErrorResponse(
     val message: String
 )
-

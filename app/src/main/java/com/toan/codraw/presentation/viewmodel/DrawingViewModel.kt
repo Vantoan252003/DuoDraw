@@ -1,9 +1,12 @@
 package com.toan.codraw.presentation.viewmodel
 
+import android.graphics.Color as AndroidColor
 import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.toArgb
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.toan.codraw.data.local.SessionManager
@@ -13,6 +16,7 @@ import com.toan.codraw.domain.model.Stroke
 import com.toan.codraw.domain.repository.DrawingRepository
 import com.toan.codraw.domain.usecase.ReceiveDrawEventsUseCase
 import com.toan.codraw.domain.usecase.SendDrawEventUseCase
+import com.toan.codraw.presentation.model.DrawingToolMode
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
@@ -21,6 +25,7 @@ import javax.inject.Inject
 
 /** Holds a Compose-friendly stroke: a pre-built Path + visual properties. */
 data class StrokeUi(
+    val id: String,
     val path: Path,
     val color: Color,
     val strokeWidth: Float,
@@ -40,6 +45,7 @@ class DrawingViewModel @Inject constructor(
         private const val SIGNAL_COMPLETE_RESPONSE = "COMPLETE_RESPONSE"
         private const val SIGNAL_COMPLETE_FINALIZED = "COMPLETE_FINALIZED"
         private const val SIGNAL_COMPLETE_CANCELLED = "COMPLETE_CANCELLED"
+        private const val SIGNAL_UNDO = "UNDO"
     }
 
     // ── Player strokes ────────────────────────────────────────────────────────
@@ -65,8 +71,15 @@ class DrawingViewModel @Inject constructor(
 
     // ── Settings ──────────────────────────────────────────────────────────────
     val currentColorState = mutableStateOf(Color.Black)
-    val isEraserModeState = mutableStateOf(false)
+    val currentToolState = mutableStateOf(DrawingToolMode.PEN)
     val currentWidthState = mutableStateOf(5f)
+    private val opacityByTool = mutableStateMapOf(
+        DrawingToolMode.PENCIL to DrawingToolMode.PENCIL.defaultOpacity,
+        DrawingToolMode.PEN to DrawingToolMode.PEN.defaultOpacity,
+        DrawingToolMode.MARKER to DrawingToolMode.MARKER.defaultOpacity
+    )
+    val currentOpacityState = mutableStateOf(DrawingToolMode.PEN.defaultOpacity)
+    private var lastDrawingTool = DrawingToolMode.PEN
 
     var localPlayerId = 1
     private var roomCode: String = ""
@@ -87,9 +100,12 @@ class DrawingViewModel @Inject constructor(
     )
 
     val currentColor: Color get() = currentColorState.value
-    val isEraserMode: Boolean get() = isEraserModeState.value
+    val isEraserMode: Boolean get() = currentToolState.value.isEraser
     val currentWidth: Float get() = currentWidthState.value
+    val currentOpacity: Float get() = currentOpacityState.value
+    val currentTool: DrawingToolMode get() = currentToolState.value
     val canRequestCompletion: Boolean get() = roomCode.isNotBlank() && !isCompleting.value && !isCompleted.value
+    val canUndoLocalPlayer: Boolean get() = latestCommittedStrokeFor(localPlayerId) != null && !isCompleted.value
 
     // ── Connect to WS room ────────────────────────────────────────────────────
     fun connect(roomCode: String, playerId: Int, playerCount: Int) {
@@ -139,8 +155,8 @@ class DrawingViewModel @Inject constructor(
         if (isCompleted.value) return
         val newId = UUID.randomUUID().toString()
         val points = mutableListOf(Point(x, y))
-        val color = if (isEraserMode) Color.White else currentColor
-        val width = if (isEraserMode) 30f else currentWidth
+        val color = currentStrokeColor()
+        val width = effectiveStrokeWidth()
         if (localPlayerId == 1) {
             currentStrokeId1 = newId
             currentPoints1.clear()
@@ -159,6 +175,22 @@ class DrawingViewModel @Inject constructor(
             currentPathEraser2.value = isEraserMode
         }
         sendPreviewStroke()
+    }
+
+    fun undoLastStroke() {
+        if (isCompleted.value) return
+        val stroke = latestCommittedStrokeFor(localPlayerId) ?: return
+        if (roomCode.isBlank()) {
+            removeStrokeById(stroke.id, localPlayerId)
+            return
+        }
+        drawingRepository.sendRoomSignal(
+            RoomSignal(
+                type = SIGNAL_UNDO,
+                playerId = localPlayerId,
+                message = stroke.id
+            )
+        )
     }
 
     fun updateDrawing(x: Float, y: Float) {
@@ -244,12 +276,26 @@ class DrawingViewModel @Inject constructor(
     fun setColor(color: Color) {
         if (isCompleted.value) return
         currentColorState.value = color
-        isEraserModeState.value = false
+        if (currentToolState.value.isEraser) {
+            currentToolState.value = lastDrawingTool
+            currentOpacityState.value = opacityForTool(lastDrawingTool)
+        }
     }
 
-    fun setEraser() {
+    fun selectTool(tool: DrawingToolMode) {
         if (isCompleted.value) return
-        isEraserModeState.value = true
+        currentToolState.value = tool
+        if (!tool.isEraser) {
+            lastDrawingTool = tool
+            currentOpacityState.value = opacityForTool(tool)
+        }
+    }
+
+    fun setOpacity(opacity: Float) {
+        if (isCompleted.value || isEraserMode) return
+        val clamped = opacity.coerceIn(0.1f, 1f)
+        currentOpacityState.value = clamped
+        opacityByTool[currentTool] = clamped
     }
 
     fun setStrokeWidth(width: Float) {
@@ -267,14 +313,12 @@ class DrawingViewModel @Inject constructor(
         val points = if (localPlayerId == 1) currentPoints1.toList() else currentPoints2.toList()
         if (points.isEmpty()) return
         val strokeId = if (localPlayerId == 1) currentStrokeId1 else currentStrokeId2
-        val color = if (isEraserMode) Color.White else currentColor
-        val width = if (isEraserMode) 30f else currentWidth
         drawingRepository.sendStroke(
             Stroke(
                 id = strokeId ?: UUID.randomUUID().toString(),
                 points = points,
-                colorHex = colorToHex(color),
-                strokeWidth = width,
+                colorHex = colorToHex(currentStrokeColor()),
+                strokeWidth = effectiveStrokeWidth(),
                 isEraser = isEraserMode,
                 isPreview = true,
                 playerId = localPlayerId
@@ -285,8 +329,6 @@ class DrawingViewModel @Inject constructor(
     private fun createCommittedStroke(): Stroke? {
         val points = if (localPlayerId == 1) currentPoints1.toList() else currentPoints2.toList()
         if (points.isEmpty()) return null
-        val color = if (isEraserMode) Color.White else currentColor
-        val width = if (isEraserMode) 30f else currentWidth
         val strokeId = if (localPlayerId == 1) {
             currentStrokeId1 ?: UUID.randomUUID().toString()
         } else {
@@ -295,8 +337,8 @@ class DrawingViewModel @Inject constructor(
         return Stroke(
             id = strokeId,
             points = points,
-            colorHex = colorToHex(color),
-            strokeWidth = width,
+            colorHex = colorToHex(currentStrokeColor()),
+            strokeWidth = effectiveStrokeWidth(),
             isEraser = isEraserMode,
             isPreview = false,
             playerId = localPlayerId
@@ -305,6 +347,11 @@ class DrawingViewModel @Inject constructor(
 
     private fun handleRoomSignal(signal: RoomSignal) {
         when (signal.type) {
+            SIGNAL_UNDO -> {
+                signal.message?.takeIf { it.isNotBlank() }?.let { strokeId ->
+                    removeStrokeById(strokeId, signal.playerId)
+                }
+            }
             SIGNAL_COMPLETE_REQUEST -> {
                 if (playerCount >= 2 && localPlayerId != signal.playerId) {
                     showCompletionApprovalDialog.value = true
@@ -398,6 +445,7 @@ class DrawingViewModel @Inject constructor(
         if (!seenStrokeIds.add(stroke.id)) return
         allStrokeData.add(stroke.copy(isPreview = false))
         val ui = StrokeUi(
+            id = stroke.id,
             path = buildPath(stroke.points),
             color = parseColor(stroke.colorHex),
             strokeWidth = stroke.strokeWidth,
@@ -426,6 +474,14 @@ class DrawingViewModel @Inject constructor(
         completionMessage.value = null
         awaitingGuestApproval.value = false
         showCompletionApprovalDialog.value = false
+        currentColorState.value = Color.Black
+        currentWidthState.value = 5f
+        currentToolState.value = DrawingToolMode.PEN
+        opacityByTool[DrawingToolMode.PENCIL] = DrawingToolMode.PENCIL.defaultOpacity
+        opacityByTool[DrawingToolMode.PEN] = DrawingToolMode.PEN.defaultOpacity
+        opacityByTool[DrawingToolMode.MARKER] = DrawingToolMode.MARKER.defaultOpacity
+        currentOpacityState.value = DrawingToolMode.PEN.defaultOpacity
+        lastDrawingTool = DrawingToolMode.PEN
     }
 
     private fun clearLocalState() {
@@ -447,15 +503,35 @@ class DrawingViewModel @Inject constructor(
         }
     }
 
-    private fun colorToHex(color: Color): String {
-        val argb = color.value.toLong() ushr 32
-        return "#%08X".format(argb)
+    private fun currentStrokeColor(): Color =
+        if (isEraserMode) Color.Transparent else currentColor.copy(alpha = opacityForTool(currentTool))
+
+    private fun opacityForTool(tool: DrawingToolMode): Float =
+        if (tool.isEraser) 1f else opacityByTool[tool] ?: tool.defaultOpacity
+
+    private fun effectiveStrokeWidth(): Float =
+        if (isEraserMode) (currentWidth * 2.25f).coerceIn(12f, 48f) else currentWidth
+
+    private fun colorToHex(color: Color): String = "#%08X".format(color.toArgb())
+
+    private fun latestCommittedStrokeFor(playerId: Int): Stroke? =
+        allStrokeData.lastOrNull { !it.isPreview && it.playerId == playerId }
+
+    private fun removeStrokeById(strokeId: String, playerId: Int) {
+        val removed = allStrokeData.removeAll { it.id == strokeId && it.playerId == playerId }
+        if (!removed) return
+        seenStrokeIds.remove(strokeId)
+        if (playerId == 1) {
+            player1Strokes.removeAll { it.id == strokeId }
+        } else {
+            player2Strokes.removeAll { it.id == strokeId }
+        }
     }
 
     private fun parseColor(hex: String): Color {
         if (hex == "#CLEAR") return Color.White
         return try {
-            Color(hex.trimStart('#').toLong(16).toInt())
+            Color(AndroidColor.parseColor(hex))
         } catch (_: Exception) {
             Color.Black
         }
