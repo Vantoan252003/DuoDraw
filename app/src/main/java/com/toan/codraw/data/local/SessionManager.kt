@@ -42,7 +42,7 @@ class SessionManager @Inject constructor(
 
     /** Trả về true nếu URL là URL tuỳ chỉnh do người dùng tự nhập (không phải IP mặc định cũ) */
     private fun isCustomUrl(url: String): Boolean {
-        val defaultIps = listOf("192.168.0.105", "192.168.31.206")
+        val defaultIps = listOf("192.168.31.154", "192.168.31.154")
         return defaultIps.none { url.contains(it) }
     }
 
@@ -65,6 +65,6 @@ class SessionManager @Inject constructor(
         private const val KEY_BASE_URL = "base_url"
 
         private const val DEFAULT_LANGUAGE_TAG = "vi"
-        const val DEFAULT_BASE_URL = "http://192.168.0.106:8080/"
+        const val DEFAULT_BASE_URL = "http://192.168.31.154:8080/"
     }
 }

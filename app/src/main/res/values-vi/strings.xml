@@ -90,5 +90,41 @@
     <string name="current_username">Tên đăng nhập: %1$s</string>
     <string name="current_email">Email: %1$s</string>
     <string name="save_changes">Lưu thay đổi</string>
-</resources>
 
+    <!-- Giao diện mới -->
+    <string name="create_new_room">Tạo phòng</string>
+    <string name="create_room_desc">Tạo phiên vẽ mới với tư cách chủ phòng</string>
+    <string name="join_existing_room">Vào phòng</string>
+    <string name="join_room_desc">Nhập mã phòng để vẽ cùng bạn bè</string>
+    <string name="live_rooms">Phòng trực tuyến</string>
+    <string name="live_rooms_subtitle">Phòng công khai đang chờ người chơi</string>
+    <string name="players_count">%1$d/2 người chơi</string>
+    <string name="waiting_label">Đang chờ</string>
+    <string name="my_profile">Hồ sơ của tôi</string>
+    <string name="view_saved_drawings">Xem bản vẽ đã lưu</string>
+    <string name="no_live_rooms">Chưa có phòng nào.\nHãy tạo một phòng để bắt đầu!</string>
+    <string name="collapse_tools">Thu gọn</string>
+    <string name="expand_tools">Mở rộng</string>
+    <string name="custom_color">Bánh xe màu</string>
+    <string name="apply">Áp dụng</string>
+    <string name="cancel">Huỷ</string>
+    <string name="select_color">Chọn một màu</string>
+    <string name="brightness">Độ sáng</string>
+
+    <!-- Vòng 2 -->
+    <string name="active_room">Phòng đang chơi</string>
+    <string name="active_room_subtitle">Bạn có một phiên vẽ đang dở</string>
+    <string name="resume_drawing">Quay lại vẽ</string>
+    <string name="welcome_to_codraw">Chào mừng đến với\nCoDraw</string>
+    <string name="get_started">Bắt đầu</string>
+    <string name="fill_all_fields">Vui lòng nhập đầy đủ thông tin!</string>
+    <string name="password_too_short">Mật khẩu phải có ít nhất 6 ký tự!</string>
+    <string name="password_mismatch">Mật khẩu xác nhận không khớp!</string>
+    <string name="unknown_error">Đã xảy ra lỗi không xác định</string>
+    <string name="profile_section">Hồ sơ</string>
+    <string name="appearance_section">Giao diện</string>
+    <string name="language_change_restart">Đổi ngôn ngữ sẽ khởi động lại ứng dụng</string>
+    <string name="server_url">URL máy chủ</string>
+    <string name="tools_label">Công cụ</string>
+    <string name="colors_label">Màu sắc</string>
+</resources>

@@ -27,7 +27,7 @@
     <string name="logging_in">Logging in…</string>
     <string name="register">Register</string>
     <string name="registering">Registering…</string>
-    <string name="no_account">Don’t have an account?</string>
+    <string name="no_account">Don\'t have an account?</string>
     <string name="register_now">Register now</string>
     <string name="have_account">Already have an account?</string>
     <string name="create_account">Create account</string>
@@ -90,4 +90,41 @@
     <string name="current_username">Username: %1$s</string>
     <string name="current_email">Email: %1$s</string>
     <string name="save_changes">Save changes</string>
+
+    <!-- Home redesign -->
+    <string name="create_new_room">Create Room</string>
+    <string name="create_room_desc">Start a new drawing session as host</string>
+    <string name="join_existing_room">Join Room</string>
+    <string name="join_room_desc">Enter a room code to join a friend</string>
+    <string name="live_rooms">Live Rooms</string>
+    <string name="live_rooms_subtitle">Realtime public rooms waiting for players</string>
+    <string name="players_count">%1$d/2 players</string>
+    <string name="waiting_label">Waiting</string>
+    <string name="my_profile">My Profile</string>
+    <string name="view_saved_drawings">View saved drawings</string>
+    <string name="no_live_rooms">No live rooms yet.\nCreate one to get started!</string>
+    <string name="collapse_tools">Collapse tools</string>
+    <string name="expand_tools">Expand tools</string>
+    <string name="custom_color">Color wheel</string>
+    <string name="apply">Apply</string>
+    <string name="cancel">Cancel</string>
+    <string name="select_color">Select a color</string>
+    <string name="brightness">Brightness</string>
+
+    <!-- Round 2 -->
+    <string name="active_room">Active Room</string>
+    <string name="active_room_subtitle">You have an ongoing drawing session</string>
+    <string name="resume_drawing">Resume Drawing</string>
+    <string name="welcome_to_codraw">Welcome to\nCoDraw</string>
+    <string name="get_started">Get started</string>
+    <string name="fill_all_fields">Please fill in all fields!</string>
+    <string name="password_too_short">Password must be at least 6 characters!</string>
+    <string name="password_mismatch">Passwords do not match!</string>
+    <string name="unknown_error">An unknown error occurred</string>
+    <string name="profile_section">Profile</string>
+    <string name="appearance_section">Appearance</string>
+    <string name="language_change_restart">Changing language will restart the app</string>
+    <string name="server_url">Server URL</string>
+    <string name="tools_label">Tools</string>
+    <string name="colors_label">Colors</string>
 </resources>

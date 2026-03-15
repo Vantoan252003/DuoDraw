@@ -10,8 +10,11 @@ import com.toan.codraw.domain.repository.ProfileRepository
 import com.toan.codraw.domain.repository.RoomRepository
 import com.toan.codraw.domain.repository.RoomResult
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -28,6 +31,10 @@ class HomeViewModel @Inject constructor(
     private val drawingRepository: DrawingRepository,
     private val profileRepository: ProfileRepository
 ) : ViewModel() {
+
+    companion object {
+        private const val POLL_INTERVAL_MS = 5000L
+    }
 
     private val _publicRooms = MutableStateFlow<List<RoomResult>>(emptyList())
     val publicRooms: StateFlow<List<RoomResult>> = _publicRooms
@@ -54,10 +61,16 @@ class HomeViewModel @Inject constructor(
     private val _publicRoomJoinState = MutableStateFlow<PublicRoomJoinState>(PublicRoomJoinState.Idle)
     val publicRoomJoinState: StateFlow<PublicRoomJoinState> = _publicRoomJoinState
 
+    private val _showProfileSheet = MutableStateFlow(false)
+    val showProfileSheet: StateFlow<Boolean> = _showProfileSheet
+
     val loggedInUsername: String get() = sessionManager.getUsername() ?: "Player"
+
+    private var pollingJob: Job? = null
 
     init {
         refreshHomeData()
+        startPollingPublicRooms()
     }
 
     fun refreshHomeData() {
@@ -101,6 +114,19 @@ class HomeViewModel @Inject constructor(
         }
     }
 
+    private fun startPollingPublicRooms() {
+        pollingJob?.cancel()
+        pollingJob = viewModelScope.launch {
+            while (isActive) {
+                delay(POLL_INTERVAL_MS)
+                roomRepository.getPublicRooms().fold(
+                    onSuccess = { _publicRooms.value = it },
+                    onFailure = { /* silent on polling errors */ }
+                )
+            }
+        }
+    }
+
     fun joinPublicRoom(roomCode: String) {
         if (_publicRoomJoinState.value is PublicRoomJoinState.Loading) return
         viewModelScope.launch {
@@ -127,5 +153,18 @@ class HomeViewModel @Inject constructor(
 
     fun clearError() {
         _errorMessage.value = null
+    }
+
+    fun openProfileSheet() {
+        _showProfileSheet.value = true
+    }
+
+    fun closeProfileSheet() {
+        _showProfileSheet.value = false
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        pollingJob?.cancel()
     }
 }

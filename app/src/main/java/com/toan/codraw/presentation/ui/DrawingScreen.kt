@@ -237,10 +237,9 @@ fun DrawingScreen(
             DrawingTools(
                 viewModel = viewModel,
                 modifier = Modifier
-                    .align(Alignment.BottomCenter)
+                    .align(Alignment.CenterStart)
                     .navigationBarsPadding()
-                    .fillMaxWidth(0.92f)
-                    .padding(bottom = 12.dp)
+                    .padding(start = 0.dp, top = 60.dp, bottom = 12.dp)
             )
         }
     }
