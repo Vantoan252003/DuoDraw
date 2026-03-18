@@ -17,6 +17,8 @@ import com.toan.codraw.domain.repository.DrawingRepository
 import com.toan.codraw.domain.usecase.ReceiveDrawEventsUseCase
 import com.toan.codraw.domain.usecase.SendDrawEventUseCase
 import com.toan.codraw.presentation.model.DrawingToolMode
+import com.toan.codraw.presentation.util.UiText
+import com.toan.codraw.R
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
@@ -46,6 +48,7 @@ class DrawingViewModel @Inject constructor(
         private const val SIGNAL_COMPLETE_FINALIZED = "COMPLETE_FINALIZED"
         private const val SIGNAL_COMPLETE_CANCELLED = "COMPLETE_CANCELLED"
         private const val SIGNAL_UNDO = "UNDO"
+        private const val SIGNAL_VIEWPORT = "VIEWPORT"
     }
 
     // ── Player strokes ────────────────────────────────────────────────────────
@@ -86,10 +89,14 @@ class DrawingViewModel @Inject constructor(
     private var playerCount: Int = 1
 
     val isCompleting = mutableStateOf(false)
-    val completionMessage = mutableStateOf<String?>(null)
+    val completionMessage = mutableStateOf<UiText?>(null)
     val isCompleted = mutableStateOf(false)
     val showCompletionApprovalDialog = mutableStateOf(false)
     val awaitingGuestApproval = mutableStateOf(false)
+
+    // Shared viewport offset — synced between both players via VIEWPORT signal
+    val sharedOffsetX = mutableStateOf(0f)
+    val sharedOffsetY = mutableStateOf(0f)
 
     private var strokeJob: Job? = null
     private var signalJob: Job? = null
@@ -193,6 +200,25 @@ class DrawingViewModel @Inject constructor(
         )
     }
 
+    /**
+     * Called when the user performs a two-finger pan gesture.
+     * Updates the shared offset locally AND broadcasts to the peer via VIEWPORT signal.
+     */
+    fun onPanDelta(dx: Float, dy: Float) {
+        sharedOffsetX.value += dx
+        sharedOffsetY.value += dy
+        if (roomCode.isNotBlank()) {
+            drawingRepository.sendRoomSignal(
+                RoomSignal(
+                    type = SIGNAL_VIEWPORT,
+                    playerId = localPlayerId,
+                    offsetX = sharedOffsetX.value,
+                    offsetY = sharedOffsetY.value
+                )
+            )
+        }
+    }
+
     fun updateDrawing(x: Float, y: Float) {
         if (isCompleted.value) return
         if (localPlayerId == 1) {
@@ -230,28 +256,22 @@ class DrawingViewModel @Inject constructor(
 
     fun onCompleteClicked() {
         if (roomCode.isBlank()) {
-            completionMessage.value = "Complete is only available for online rooms."
-            return
-        }
-        if (allStrokeData.isEmpty()) {
-            completionMessage.value = "Nothing to save yet."
-            return
-        }
-        if (playerCount < 2) {
-            finalizeDrawing(notifyPeer = false)
+            completionMessage.value = UiText.StringResource(R.string.msg_only_online_rooms)
             return
         }
         if (localPlayerId != 1) {
-            completionMessage.value = "Only the host can request completion."
+            return
+        }
+        if (allStrokeData.isEmpty()) {
+            completionMessage.value = UiText.StringResource(R.string.msg_nothing_to_save)
             return
         }
         awaitingGuestApproval.value = true
-        completionMessage.value = "Waiting for Player 2 to approve completion..."
+        completionMessage.value = UiText.StringResource(R.string.msg_waiting_for_peer_approval)
         drawingRepository.sendRoomSignal(
             RoomSignal(
                 type = SIGNAL_COMPLETE_REQUEST,
-                playerId = localPlayerId,
-                message = "Player 1 wants to complete the drawing."
+                playerId = localPlayerId
             )
         )
     }
@@ -259,16 +279,15 @@ class DrawingViewModel @Inject constructor(
     fun respondToCompletionRequest(approved: Boolean) {
         showCompletionApprovalDialog.value = false
         completionMessage.value = if (approved) {
-            "Approval sent. Waiting for completion..."
+            UiText.StringResource(R.string.msg_approval_sent)
         } else {
-            "You declined the completion request."
+            UiText.StringResource(R.string.msg_you_declined)
         }
         drawingRepository.sendRoomSignal(
             RoomSignal(
                 type = SIGNAL_COMPLETE_RESPONSE,
                 playerId = localPlayerId,
-                approved = approved,
-                message = if (approved) "Player 2 approved completion." else "Player 2 declined completion."
+                approved = approved
             )
         )
     }
@@ -347,29 +366,35 @@ class DrawingViewModel @Inject constructor(
 
     private fun handleRoomSignal(signal: RoomSignal) {
         when (signal.type) {
+            SIGNAL_VIEWPORT -> {
+                // Peer sent their viewport — sync our view to match
+                if (signal.playerId != localPlayerId) {
+                    signal.offsetX?.let { sharedOffsetX.value = it }
+                    signal.offsetY?.let { sharedOffsetY.value = it }
+                }
+            }
             SIGNAL_UNDO -> {
                 signal.message?.takeIf { it.isNotBlank() }?.let { strokeId ->
                     removeStrokeById(strokeId, signal.playerId)
                 }
             }
             SIGNAL_COMPLETE_REQUEST -> {
-                if (playerCount >= 2 && localPlayerId != signal.playerId) {
+                if (localPlayerId != signal.playerId) {
                     showCompletionApprovalDialog.value = true
-                    completionMessage.value = signal.message ?: "Player 1 wants to complete the drawing."
+                    completionMessage.value = UiText.StringResource(R.string.msg_peer_requested_completion, signal.playerId)
                 }
             }
             SIGNAL_COMPLETE_RESPONSE -> {
-                if (localPlayerId == 1) {
+                if (awaitingGuestApproval.value) {
                     awaitingGuestApproval.value = false
                     if (signal.approved == true) {
                         finalizeDrawing(notifyPeer = true)
                     } else {
-                        completionMessage.value = signal.message ?: "Player 2 declined completion."
+                        completionMessage.value = UiText.StringResource(R.string.msg_peer_declined)
                         drawingRepository.sendRoomSignal(
                             RoomSignal(
                                 type = SIGNAL_COMPLETE_CANCELLED,
-                                playerId = localPlayerId,
-                                message = "Completion was cancelled."
+                                playerId = localPlayerId
                             )
                         )
                     }
@@ -379,12 +404,13 @@ class DrawingViewModel @Inject constructor(
                 awaitingGuestApproval.value = false
                 showCompletionApprovalDialog.value = false
                 isCompleted.value = true
-                completionMessage.value = signal.message ?: "Drawing completed successfully."
+                sessionManager.clearActiveRoom()
+                completionMessage.value = UiText.StringResource(R.string.msg_completed_success)
             }
             SIGNAL_COMPLETE_CANCELLED -> {
                 awaitingGuestApproval.value = false
                 showCompletionApprovalDialog.value = false
-                completionMessage.value = signal.message ?: "Completion was cancelled."
+                completionMessage.value = UiText.StringResource(R.string.msg_completion_cancelled)
             }
         }
     }
@@ -396,25 +422,24 @@ class DrawingViewModel @Inject constructor(
             drawingRepository.completeDrawing(roomCode, allStrokeData.toList()).fold(
                 onSuccess = {
                     isCompleted.value = true
-                    completionMessage.value = "Saved ${it.strokeCount} strokes for room ${it.roomCode}."
+                    sessionManager.clearActiveRoom()
+                    completionMessage.value = UiText.StringResource(R.string.msg_saved_strokes, it.strokeCount, it.roomCode)
                     if (notifyPeer) {
                         drawingRepository.sendRoomSignal(
                             RoomSignal(
                                 type = SIGNAL_COMPLETE_FINALIZED,
-                                playerId = localPlayerId,
-                                message = "Both players agreed. The drawing has been completed."
+                                playerId = localPlayerId
                             )
                         )
                     }
                 },
                 onFailure = {
-                    completionMessage.value = it.message ?: "Failed to complete drawing."
+                    completionMessage.value = UiText.StringResource(R.string.msg_completion_failed)
                     if (notifyPeer) {
                         drawingRepository.sendRoomSignal(
                             RoomSignal(
                                 type = SIGNAL_COMPLETE_CANCELLED,
-                                playerId = localPlayerId,
-                                message = "Completion failed. Please try again."
+                                playerId = localPlayerId
                             )
                         )
                     }

@@ -7,6 +7,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.toan.codraw.data.local.SessionManager
 import com.toan.codraw.presentation.ui.DrawingScreen
 import com.toan.codraw.presentation.ui.HomeScreen
 import com.toan.codraw.presentation.ui.LoginScreen
@@ -17,7 +18,7 @@ import com.toan.codraw.presentation.ui.SettingsScreen
 import com.toan.codraw.presentation.viewmodel.AuthViewModel
 
 @Composable
-fun NavGraph() {
+fun NavGraph(sessionManager: SessionManager) {
     val navController = rememberNavController()
     val authViewModel: AuthViewModel = hiltViewModel()
 
@@ -57,6 +58,8 @@ fun NavGraph() {
                     navController.navigate(route)
                 },
                 onEnterDrawingRoom = { roomCode, playerId, playerCount ->
+                    // Save active room before navigating
+                    sessionManager.saveActiveRoom(roomCode, playerId, playerCount)
                     navController.navigate("drawing/$roomCode/$playerId/$playerCount") {
                         launchSingleTop = true
                     }
@@ -89,6 +92,8 @@ fun NavGraph() {
             val initialCode = backStackEntry.arguments?.getString("code").orEmpty()
             RoomScreen(
                 onRoomReady = { roomCode, playerId, playerCount ->
+                    // Save active room before navigating
+                    sessionManager.saveActiveRoom(roomCode, playerId, playerCount)
                     navController.navigate("drawing/$roomCode/$playerId/$playerCount") {
                         launchSingleTop = true
                         popUpTo("home") { inclusive = false }
@@ -114,7 +119,9 @@ fun NavGraph() {
                 roomCode = roomCode,
                 localPlayerId = playerId,
                 playerCount = playerCount,
-                onNavigateBack = { navController.popBackStack() }
+                onNavigateBack = {
+                    navController.popBackStack()
+                }
             )
         }
 

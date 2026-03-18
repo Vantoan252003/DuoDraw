@@ -4,6 +4,8 @@ data class RoomSignalDto(
     val type: String,
     val playerId: Int = 0,
     val approved: Boolean? = null,
-    val message: String? = null
+    val message: String? = null,
+    val offsetX: Float? = null,
+    val offsetY: Float? = null
 )
 

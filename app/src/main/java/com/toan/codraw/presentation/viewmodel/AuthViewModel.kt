@@ -44,12 +44,11 @@ class AuthViewModel @Inject constructor(
 
     fun login() {
         if (username.isBlank() || password.isBlank()) {
-            _uiState.value = AuthUiState.Error("Vui lòng nhập đầy đủ thông tin!")
+            _uiState.value = AuthUiState.Error("fill_all_fields")
             return
         }
         viewModelScope.launch {
             _uiState.value = AuthUiState.Loading
-            // Save the base URL first so Retrofit uses updated URL
             sessionManager.saveBaseUrl(baseUrl)
             val result = authRepository.login(username.trim(), password)
             result.fold(
@@ -61,7 +60,7 @@ class AuthViewModel @Inject constructor(
                     _uiState.value = AuthUiState.Success(auth.username)
                 },
                 onFailure = { e ->
-                    _uiState.value = AuthUiState.Error(e.message ?: "Lỗi không xác định")
+                    _uiState.value = AuthUiState.Error(e.message ?: "unknown_error")
                 }
             )
         }
@@ -69,15 +68,15 @@ class AuthViewModel @Inject constructor(
 
     fun register() {
         if (username.isBlank() || email.isBlank() || password.isBlank()) {
-            _uiState.value = AuthUiState.Error("Vui lòng nhập đầy đủ thông tin!")
+            _uiState.value = AuthUiState.Error("fill_all_fields")
             return
         }
         if (password != confirmPassword) {
-            _uiState.value = AuthUiState.Error("Mật khẩu xác nhận không khớp!")
+            _uiState.value = AuthUiState.Error("password_mismatch")
             return
         }
         if (password.length < 6) {
-            _uiState.value = AuthUiState.Error("Mật khẩu phải có ít nhất 6 ký tự!")
+            _uiState.value = AuthUiState.Error("password_too_short")
             return
         }
         viewModelScope.launch {
@@ -93,7 +92,7 @@ class AuthViewModel @Inject constructor(
                     _uiState.value = AuthUiState.Success(auth.username)
                 },
                 onFailure = { e ->
-                    _uiState.value = AuthUiState.Error(e.message ?: "Lỗi không xác định")
+                    _uiState.value = AuthUiState.Error(e.message ?: "unknown_error")
                 }
             )
         }

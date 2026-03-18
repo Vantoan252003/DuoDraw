@@ -103,6 +103,8 @@
     <string name="my_profile">Hồ sơ của tôi</string>
     <string name="view_saved_drawings">Xem bản vẽ đã lưu</string>
     <string name="no_live_rooms">Chưa có phòng nào.\nHãy tạo một phòng để bắt đầu!</string>
+    <string name="live_badge">TRỰC TIẾP</string>
+    <string name="resume_drawing">Tiếp tục vẽ</string>
     <string name="collapse_tools">Thu gọn</string>
     <string name="expand_tools">Mở rộng</string>
     <string name="custom_color">Bánh xe màu</string>
@@ -114,7 +116,7 @@
     <!-- Vòng 2 -->
     <string name="active_room">Phòng đang chơi</string>
     <string name="active_room_subtitle">Bạn có một phiên vẽ đang dở</string>
-    <string name="resume_drawing">Quay lại vẽ</string>
+
     <string name="welcome_to_codraw">Chào mừng đến với\nCoDraw</string>
     <string name="get_started">Bắt đầu</string>
     <string name="fill_all_fields">Vui lòng nhập đầy đủ thông tin!</string>
@@ -127,4 +129,17 @@
     <string name="server_url">URL máy chủ</string>
     <string name="tools_label">Công cụ</string>
     <string name="colors_label">Màu sắc</string>
+
+    <!-- Completion Flow -->
+    <string name="msg_only_online_rooms">Tính năng hoàn tất chỉ dành cho phòng trực tuyến.</string>
+    <string name="msg_nothing_to_save">Chưa có nét vẽ nào để lưu.</string>
+    <string name="msg_waiting_for_peer_approval">Đang chờ người chơi kia đồng ý hoàn tất...</string>
+    <string name="msg_peer_requested_completion">Người chơi %1$d muốn hoàn tất bản vẽ.</string>
+    <string name="msg_approval_sent">Đã gửi phê duyệt. Đang chờ hoàn tất...</string>
+    <string name="msg_you_declined">Bạn đã từ chối yêu cầu hoàn tất.</string>
+    <string name="msg_peer_declined">Người chơi kia đã từ chối hoàn tất.</string>
+    <string name="msg_completion_cancelled">Quá trình hoàn tất đã bị huỷ.</string>
+    <string name="msg_completion_failed">Hoàn tất thất bại. Vui lòng thử lại.</string>
+    <string name="msg_completed_success">Cả hai người chơi đều đồng ý. Bản vẽ đã được hoàn tất.</string>
+    <string name="msg_saved_strokes">Đã lưu %1$d nét vẽ cho phòng %2$s.</string>
 </resources>

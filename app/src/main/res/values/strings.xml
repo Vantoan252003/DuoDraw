@@ -103,6 +103,8 @@
     <string name="my_profile">My Profile</string>
     <string name="view_saved_drawings">View saved drawings</string>
     <string name="no_live_rooms">No live rooms yet.\nCreate one to get started!</string>
+    <string name="live_badge">LIVE</string>
+    <string name="resume_drawing">Resume Drawing</string>
     <string name="collapse_tools">Collapse tools</string>
     <string name="expand_tools">Expand tools</string>
     <string name="custom_color">Color wheel</string>
@@ -114,7 +116,7 @@
     <!-- Round 2 -->
     <string name="active_room">Active Room</string>
     <string name="active_room_subtitle">You have an ongoing drawing session</string>
-    <string name="resume_drawing">Resume Drawing</string>
+
     <string name="welcome_to_codraw">Welcome to\nCoDraw</string>
     <string name="get_started">Get started</string>
     <string name="fill_all_fields">Please fill in all fields!</string>
@@ -127,4 +129,17 @@
     <string name="server_url">Server URL</string>
     <string name="tools_label">Tools</string>
     <string name="colors_label">Colors</string>
+
+    <!-- Completion Flow -->
+    <string name="msg_only_online_rooms">Complete is only available for online rooms.</string>
+    <string name="msg_nothing_to_save">Nothing to save yet.</string>
+    <string name="msg_waiting_for_peer_approval">Waiting for the other player to approve completion...</string>
+    <string name="msg_peer_requested_completion">Player %1$d wants to complete the drawing.</string>
+    <string name="msg_approval_sent">Approval sent. Waiting for completion...</string>
+    <string name="msg_you_declined">You declined the completion request.</string>
+    <string name="msg_peer_declined">The other player declined completion.</string>
+    <string name="msg_completion_cancelled">Completion was cancelled.</string>
+    <string name="msg_completion_failed">Completion failed. Please try again.</string>
+    <string name="msg_completed_success">Both players agreed. The drawing has been completed.</string>
+    <string name="msg_saved_strokes">Saved %1$d strokes for room %2$s.</string>
 </resources>

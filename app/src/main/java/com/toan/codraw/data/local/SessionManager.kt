@@ -42,8 +42,26 @@ class SessionManager @Inject constructor(
 
     /** Trả về true nếu URL là URL tuỳ chỉnh do người dùng tự nhập (không phải IP mặc định cũ) */
     private fun isCustomUrl(url: String): Boolean {
-        val defaultIps = listOf("192.168.31.154", "192.168.31.154")
+        val defaultIps = listOf("192.168.110.169", "192.168.31.154")
         return defaultIps.none { url.contains(it) }
+    }
+
+    fun saveActiveRoom(roomCode: String, playerId: Int, playerCount: Int) {
+        prefs.edit()
+            .putString(KEY_ACTIVE_ROOM, roomCode)
+            .putInt(KEY_ACTIVE_PLAYER_ID, playerId)
+            .putInt(KEY_ACTIVE_PLAYER_COUNT, playerCount)
+            .apply()
+    }
+    fun getActiveRoom(): String? = prefs.getString(KEY_ACTIVE_ROOM, null)
+    fun getActivePlayerId(): Int = prefs.getInt(KEY_ACTIVE_PLAYER_ID, 1)
+    fun getActivePlayerCount(): Int = prefs.getInt(KEY_ACTIVE_PLAYER_COUNT, 1)
+    fun clearActiveRoom() {
+        prefs.edit()
+            .remove(KEY_ACTIVE_ROOM)
+            .remove(KEY_ACTIVE_PLAYER_ID)
+            .remove(KEY_ACTIVE_PLAYER_COUNT)
+            .apply()
     }
 
     fun isLoggedIn(): Boolean = getToken() != null
@@ -63,8 +81,11 @@ class SessionManager @Inject constructor(
         private const val KEY_AVATAR_URL = "avatar_url"
         private const val KEY_LANGUAGE_TAG = "language_tag"
         private const val KEY_BASE_URL = "base_url"
+        private const val KEY_ACTIVE_ROOM = "active_room"
+        private const val KEY_ACTIVE_PLAYER_ID = "active_player_id"
+        private const val KEY_ACTIVE_PLAYER_COUNT = "active_player_count"
 
         private const val DEFAULT_LANGUAGE_TAG = "vi"
-        const val DEFAULT_BASE_URL = "http://192.168.31.154:8080/"
+        const val DEFAULT_BASE_URL = "http://192.168.110.169:8080/"
     }
 }

@@ -94,8 +94,11 @@ fun DrawingScreen(
     val isCompleted by viewModel.isCompleted
     val showApprovalDialog by viewModel.showCompletionApprovalDialog
     val awaitingGuestApproval by viewModel.awaitingGuestApproval
+    val sharedOffsetX by viewModel.sharedOffsetX
+    val sharedOffsetY by viewModel.sharedOffsetY
 
     if (showApprovalDialog) {
+        val requestingPeerId = if (localPlayerId == 1) 2 else 1
         AlertDialog(
             onDismissRequest = { viewModel.respondToCompletionRequest(false) },
             confirmButton = {
@@ -109,7 +112,7 @@ fun DrawingScreen(
                 }
             },
             title = { Text(stringResource(R.string.complete_drawing_prompt_title)) },
-            text = { Text(stringResource(R.string.complete_drawing_prompt_message)) }
+            text = { Text(stringResource(R.string.msg_peer_requested_completion, requestingPeerId)) }
         )
     }
 
@@ -130,6 +133,9 @@ fun DrawingScreen(
                 onDragStart = viewModel::startDrawing,
                 onDrag = viewModel::updateDrawing,
                 onDragEnd = viewModel::finishDrawing,
+                sharedOffsetX = sharedOffsetX,
+                sharedOffsetY = sharedOffsetY,
+                onPanChanged = viewModel::onPanDelta,
                 modifier = Modifier.weight(1f)
             )
             CanvasPane(
@@ -143,6 +149,9 @@ fun DrawingScreen(
                 onDragStart = viewModel::startDrawing,
                 onDrag = viewModel::updateDrawing,
                 onDragEnd = viewModel::finishDrawing,
+                sharedOffsetX = sharedOffsetX,
+                sharedOffsetY = sharedOffsetY,
+                onPanChanged = viewModel::onPanDelta,
                 modifier = Modifier.weight(1f)
             )
         }
@@ -186,7 +195,7 @@ fun DrawingScreen(
                 }
             }
 
-            if (roomCode.isNotBlank()) {
+            if (roomCode.isNotBlank() && localPlayerId == 1) {
                 Button(onClick = viewModel::onCompleteClicked, enabled = viewModel.canRequestCompletion) {
                     if (isCompleting) {
                         CircularProgressIndicator(
@@ -222,7 +231,7 @@ fun DrawingScreen(
                     .padding(top = 72.dp, start = 16.dp, end = 16.dp)
             ) {
                 Text(
-                    text = completionMessage.orEmpty(),
+                    text = completionMessage?.asString() ?: "",
                     modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
                     color = if (isCompleted) {
                         MaterialTheme.colorScheme.onPrimaryContainer
@@ -257,6 +266,9 @@ private fun CanvasPane(
     onDragStart: (Float, Float) -> Unit,
     onDrag: (Float, Float) -> Unit,
     onDragEnd: () -> Unit,
+    sharedOffsetX: Float = 0f,
+    sharedOffsetY: Float = 0f,
+    onPanChanged: ((Float, Float) -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     Box(modifier = modifier.fillMaxSize()) {
@@ -269,7 +281,10 @@ private fun CanvasPane(
             onDragStart = onDragStart,
             onDrag = onDrag,
             onDragEnd = onDragEnd,
-            isInputEnabled = isInputEnabled
+            isInputEnabled = isInputEnabled,
+            sharedOffsetX = sharedOffsetX,
+            sharedOffsetY = sharedOffsetY,
+            onPanChanged = onPanChanged
         )
         if (isLocalPane) {
             Surface(

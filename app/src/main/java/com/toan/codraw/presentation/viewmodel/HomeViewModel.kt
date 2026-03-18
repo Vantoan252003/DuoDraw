@@ -24,6 +24,12 @@ sealed interface PublicRoomJoinState {
     data class Success(val room: RoomResult) : PublicRoomJoinState
 }
 
+data class ActiveRoomInfo(
+    val roomCode: String,
+    val playerId: Int,
+    val playerCount: Int
+)
+
 @HiltViewModel
 class HomeViewModel @Inject constructor(
     private val sessionManager: SessionManager,
@@ -64,13 +70,44 @@ class HomeViewModel @Inject constructor(
     private val _showProfileSheet = MutableStateFlow(false)
     val showProfileSheet: StateFlow<Boolean> = _showProfileSheet
 
+    private val _activeRoom = MutableStateFlow<ActiveRoomInfo?>(null)
+    val activeRoom: StateFlow<ActiveRoomInfo?> = _activeRoom
+
     val loggedInUsername: String get() = sessionManager.getUsername() ?: "Player"
 
     private var pollingJob: Job? = null
 
     init {
+        loadActiveRoom()
         refreshHomeData()
         startPollingPublicRooms()
+    }
+
+    private fun loadActiveRoom() {
+        val roomCode = sessionManager.getActiveRoom() ?: return
+        // Validate that the room still exists and is not FINISHED before showing resume chip
+        viewModelScope.launch {
+            roomRepository.getRoom(roomCode).fold(
+                onSuccess = { room ->
+                    if (room.status == "FINISHED") {
+                        // Room is already done — clear it
+                        sessionManager.clearActiveRoom()
+                        _activeRoom.value = null
+                    } else {
+                        _activeRoom.value = ActiveRoomInfo(
+                            roomCode = roomCode,
+                            playerId = sessionManager.getActivePlayerId(),
+                            playerCount = sessionManager.getActivePlayerCount()
+                        )
+                    }
+                },
+                onFailure = {
+                    // Room not found or network error: clear to avoid stale chip
+                    sessionManager.clearActiveRoom()
+                    _activeRoom.value = null
+                }
+            )
+        }
     }
 
     fun refreshHomeData() {
@@ -109,6 +146,9 @@ class HomeViewModel @Inject constructor(
                     }
                 }
             )
+
+            // Reload active room state
+            loadActiveRoom()
 
             _isLoading.value = false
         }

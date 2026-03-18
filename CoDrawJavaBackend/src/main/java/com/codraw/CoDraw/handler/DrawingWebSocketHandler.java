@@ -7,6 +7,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.socket.CloseStatus;
 import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
+import org.springframework.web.socket.handler.ConcurrentWebSocketSessionDecorator;
 import org.springframework.web.socket.handler.TextWebSocketHandler;
 
 import java.util.LinkedHashMap;
@@ -24,22 +25,33 @@ import java.util.concurrent.ConcurrentHashMap;
  *   {"type":"JOIN","roomCode":"ABC123"}   -> server gui lai lich su strokes tu Redis
  *   {"type":"CLEAR","roomCode":"ABC123"}  -> xoa canvas cua phong tren Redis
  *   {"type":"STROKE", ... stroke fields}  -> broadcast + luu vao Redis
+ *
+ * Fix: Wrap moi session bang ConcurrentWebSocketSessionDecorator de ghi message
+ *      tu nhieu thread dong thoi ma khong bi loi "sendMessage from multiple threads".
+ *      Send timeout 5s, buffer 256KB – du lon cho preview strokes.
  */
 @Component
 public class DrawingWebSocketHandler extends TextWebSocketHandler {
+
+    private static final int SEND_TIME_LIMIT_MS = 5_000;
+    private static final int SEND_BUFFER_SIZE_LIMIT = 256 * 1024; // 256KB
 
     private static final Set<String> RELAY_ONLY_TYPES = Set.of(
             "STROKE_PREVIEW",
             "COMPLETE_REQUEST",
             "COMPLETE_RESPONSE",
             "COMPLETE_FINALIZED",
-            "COMPLETE_CANCELLED"
+            "COMPLETE_CANCELLED",
+            "VIEWPORT",
+            "UNDO"
     );
 
-    // roomCode -> Set<session>
-    private final Map<String, Set<WebSocketSession>> rooms = new ConcurrentHashMap<>();
+    // roomCode -> Set<ConcurrentWebSocketSessionDecorator>
+    private final Map<String, Set<ConcurrentWebSocketSessionDecorator>> rooms = new ConcurrentHashMap<>();
     // sessionId -> roomCode
     private final Map<String, String> sessionRoom = new ConcurrentHashMap<>();
+    // sessionId -> ConcurrentWebSocketSessionDecorator (to retrieve for removal)
+    private final Map<String, ConcurrentWebSocketSessionDecorator> sessionDecorators = new ConcurrentHashMap<>();
 
     private final CanvasStateService canvasStateService;
     private final ObjectMapper objectMapper;
@@ -51,31 +63,38 @@ public class DrawingWebSocketHandler extends TextWebSocketHandler {
     }
 
     @Override
-    public void afterConnectionEstablished(WebSocketSession session) {
-        // roomCode duoc truyen qua query param: ws://...?roomCode=ABC123
-        String roomCode = getRoomCode(session);
+    public void afterConnectionEstablished(WebSocketSession rawSession) {
+        String roomCode = getRoomCode(rawSession);
         if (roomCode == null || roomCode.isBlank()) return;
 
-        rooms.computeIfAbsent(roomCode, k -> ConcurrentHashMap.newKeySet()).add(session);
-        sessionRoom.put(session.getId(), roomCode);
+        // Wrap the session so concurrent sends are safe (queued, not thrown)
+        ConcurrentWebSocketSessionDecorator session = new ConcurrentWebSocketSessionDecorator(
+                rawSession, SEND_TIME_LIMIT_MS, SEND_BUFFER_SIZE_LIMIT
+        );
 
-        // Gui lai toan bo lich su strokes tu Redis cho nguoi moi vao
+        rooms.computeIfAbsent(roomCode, k -> ConcurrentHashMap.newKeySet()).add(session);
+        sessionRoom.put(rawSession.getId(), roomCode);
+        sessionDecorators.put(rawSession.getId(), session);
+
+        // Replay stroke history for the newly joined player
         List<StrokeMessage> history = canvasStateService.getStrokes(roomCode);
         for (StrokeMessage stroke : history) {
             try {
                 String json = objectMapper.writeValueAsString(stroke);
                 session.sendMessage(new TextMessage(json));
-            } catch (Exception ignored) {}
+            } catch (Exception e) {
+                System.err.println("[CoDraw] Error replaying history to " + rawSession.getId() + ": " + e.getMessage());
+            }
         }
 
-        System.out.println("[CoDraw] Session " + session.getId()
+        System.out.println("[CoDraw] Session " + rawSession.getId()
                 + " joined room " + roomCode
                 + " | total in room: " + rooms.get(roomCode).size());
     }
 
     @Override
-    protected void handleTextMessage(WebSocketSession session, TextMessage message) throws Exception {
-        String roomCode = sessionRoom.get(session.getId());
+    protected void handleTextMessage(WebSocketSession rawSession, TextMessage message) throws Exception {
+        String roomCode = sessionRoom.get(rawSession.getId());
         if (roomCode == null) return;
 
         String payload = message.getPayload();
@@ -84,74 +103,74 @@ public class DrawingWebSocketHandler extends TextWebSocketHandler {
         String type = map.getOrDefault("type", "STROKE").toString();
 
         if ("JOIN".equals(type)) {
-            // Da xu ly trong afterConnectionEstablished, bo qua
-            return;
+            return; // Already handled in afterConnectionEstablished
         }
 
         if ("CLEAR".equals(type)) {
-            // Xoa canvas trong Redis va broadcast cho tat ca
             canvasStateService.clearStrokes(roomCode);
-            broadcast(roomCode, session, payload, false); // broadcast ca sender
-            return;
-        }
-
-        if ("UNDO".equals(type)) {
-            // Xu ly tin nhan UNDO: xoa stroke cuoi cua player va thong bao cho tat ca
-            int playerId = ((Number) map.getOrDefault("playerId", 0)).intValue();
-            StrokeMessage removed = canvasStateService.removeLastStrokeForPlayer(roomCode, playerId);
-            if (removed != null) {
-                Map<String, Object> undoPayload = new LinkedHashMap<>();
-                undoPayload.put("type", "UNDO");
-                undoPayload.put("playerId", playerId);
-                undoPayload.put("message", removed.getId());
-                broadcast(roomCode, session, objectMapper.writeValueAsString(undoPayload), false); // broadcast ca sender
-            }
+            broadcast(roomCode, rawSession.getId(), payload, false);
             return;
         }
 
         if (RELAY_ONLY_TYPES.contains(type)) {
-            // CHO PHÉP CHỈ ĐƯA TIN NHẮN ĐẾN KHÁCH HÀNG KHÁC
-            broadcast(roomCode, session, payload, true); // chi broadcast cho nguoi khac
+            // Relay-only: forward to peers, do NOT persist to Redis
+            broadcast(roomCode, rawSession.getId(), payload, true);
             return;
         }
 
-        // STROKE default: luu vao Redis va broadcast
+        // STROKE default: save to Redis and broadcast to peers
         StrokeMessage stroke = objectMapper.readValue(payload, StrokeMessage.class);
         stroke.setType(type);
         stroke.setPreview(false);
         canvasStateService.addStroke(roomCode, stroke);
-        broadcast(roomCode, session, objectMapper.writeValueAsString(stroke), true); // chi broadcast cho nguoi khac
+        broadcast(roomCode, rawSession.getId(), objectMapper.writeValueAsString(stroke), true);
     }
 
     @Override
-    public void afterConnectionClosed(WebSocketSession session, CloseStatus status) {
-        String roomCode = sessionRoom.remove(session.getId());
-        if (roomCode != null) {
-            Set<WebSocketSession> roomSessions = rooms.get(roomCode);
-            if (roomSessions != null) {
-                roomSessions.remove(session);
-                if (roomSessions.isEmpty()) rooms.remove(roomCode);
-            }
-        }
-        System.out.println("[CoDraw] Session " + session.getId() + " disconnected");
+    public void afterConnectionClosed(WebSocketSession rawSession, CloseStatus status) {
+        removeSession(rawSession.getId());
+        System.out.println("[CoDraw] Session " + rawSession.getId()
+                + " disconnected | status: " + status);
     }
 
     @Override
-    public void handleTransportError(WebSocketSession session, Throwable exception) {
-        afterConnectionClosed(session, CloseStatus.SERVER_ERROR);
+    public void handleTransportError(WebSocketSession rawSession, Throwable exception) {
+        // Log but do NOT call afterConnectionClosed manually — Spring will call it
+        System.err.println("[CoDraw] Transport error for session " + rawSession.getId()
+                + ": " + exception.getMessage());
+        try {
+            if (rawSession.isOpen()) rawSession.close(CloseStatus.SERVER_ERROR);
+        } catch (Exception ignored) {}
     }
 
     // ── Helpers ──────────────────────────────────────────────────────────────
 
-    private void broadcast(String roomCode, WebSocketSession sender,
+    private void removeSession(String sessionId) {
+        String roomCode = sessionRoom.remove(sessionId);
+        ConcurrentWebSocketSessionDecorator decorator = sessionDecorators.remove(sessionId);
+        if (roomCode != null && decorator != null) {
+            Set<ConcurrentWebSocketSessionDecorator> roomSessions = rooms.get(roomCode);
+            if (roomSessions != null) {
+                roomSessions.remove(decorator);
+                if (roomSessions.isEmpty()) rooms.remove(roomCode);
+            }
+        }
+    }
+
+    private void broadcast(String roomCode, String senderId,
                            String payload, boolean excludeSender) {
-        Set<WebSocketSession> roomSessions = rooms.get(roomCode);
+        Set<ConcurrentWebSocketSessionDecorator> roomSessions = rooms.get(roomCode);
         if (roomSessions == null) return;
-        for (WebSocketSession s : roomSessions) {
-            if (excludeSender && s.getId().equals(sender.getId())) continue;
+
+        TextMessage msg = new TextMessage(payload);
+        for (ConcurrentWebSocketSessionDecorator s : roomSessions) {
+            if (excludeSender && s.getId().equals(senderId)) continue;
             if (s.isOpen()) {
-                try { s.sendMessage(new TextMessage(payload)); }
-                catch (Exception ignored) {}
+                try {
+                    s.sendMessage(msg);
+                } catch (Exception e) {
+                    System.err.println("[CoDraw] Broadcast error to " + s.getId() + ": " + e.getMessage());
+                }
             }
         }
     }

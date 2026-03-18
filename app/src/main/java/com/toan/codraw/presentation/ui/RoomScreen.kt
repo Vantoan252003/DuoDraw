@@ -18,9 +18,15 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.compose.foundation.background
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import com.toan.codraw.R
 import com.toan.codraw.presentation.viewmodel.RoomUiState
 import com.toan.codraw.presentation.viewmodel.RoomViewModel
+import com.toan.codraw.ui.theme.GradientEnd
+import com.toan.codraw.ui.theme.GradientMint
+import com.toan.codraw.ui.theme.GradientStart
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -48,6 +54,7 @@ fun RoomScreen(
     }
 
     Scaffold(
+        containerColor = Color.Transparent,
         topBar = {
             TopAppBar(
                 title = { Text(stringResource(R.string.drawing_room), fontWeight = FontWeight.Bold) },
@@ -57,19 +64,32 @@ fun RoomScreen(
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer
+                    containerColor = Color.Transparent
                 )
             )
         }
     ) { padding ->
-        Column(
+        Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(padding)
-                .padding(24.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
+                .background(
+                    Brush.verticalGradient(
+                        listOf(
+                            GradientStart.copy(alpha = 0.15f),
+                            GradientEnd.copy(alpha = 0.08f),
+                            MaterialTheme.colorScheme.background
+                        )
+                    )
+                )
         ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(padding)
+                    .padding(24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
+            ) {
 
             Text(
                 stringResource(R.string.home_greeting, viewModel.username),
@@ -243,4 +263,5 @@ fun RoomScreen(
             }
         }
     }
+}
 }

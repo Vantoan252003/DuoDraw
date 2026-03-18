@@ -52,7 +52,9 @@ class DrawingWebSocketListener(
                                 type = dto.type,
                                 playerId = dto.playerId,
                                 approved = dto.approved,
-                                message = dto.message
+                                message = dto.message,
+                                offsetX = dto.offsetX,
+                                offsetY = dto.offsetY
                             )
                         )
                     }

@@ -1,10 +1,12 @@
 package com.toan.codraw.presentation.ui
 
+import android.content.Intent
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.appcompat.app.AppCompatDelegate
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -15,45 +17,53 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.AccountCircle
+import androidx.compose.material.icons.filled.CameraAlt
+import androidx.compose.material.icons.filled.Language
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Scaffold
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.core.os.LocaleListCompat
+import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
 import com.toan.codraw.R
 import com.toan.codraw.presentation.viewmodel.SettingsViewModel
+import com.toan.codraw.ui.theme.GradientEnd
+import com.toan.codraw.ui.theme.GradientStart
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
     onNavigateBack: () -> Unit,
@@ -75,156 +85,312 @@ fun SettingsScreen(
         }
     }
 
-    LaunchedEffect(viewModel.selectedLanguageTag) {
-        AppCompatDelegate.setApplicationLocales(
-            LocaleListCompat.forLanguageTags(viewModel.selectedLanguageTag)
-        )
-    }
-
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text(stringResource(R.string.settings), fontWeight = FontWeight.Bold) },
-                navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer
-                )
-            )
-        }
-    ) { padding ->
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color(0xFFF5F7FF))
+    ) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(padding)
                 .verticalScroll(rememberScrollState())
-                .padding(20.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            Text(
-                text = stringResource(R.string.settings_subtitle),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+            // ── Bright gradient header ─────────────────────────
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(
+                        Brush.linearGradient(
+                            listOf(GradientStart, Color(0xFF9B59B6), GradientEnd)
+                        )
+                    )
+                    .statusBarsPadding()
+                    .padding(vertical = 20.dp)
+            ) {
+                IconButton(
+                    onClick = onNavigateBack,
+                    modifier = Modifier
+                        .align(Alignment.CenterStart)
+                        .padding(start = 8.dp)
+                ) {
+                    Icon(
+                        Icons.AutoMirrored.Filled.ArrowBack,
+                        contentDescription = stringResource(R.string.back),
+                        tint = Color.White
+                    )
+                }
+                Text(
+                    text = stringResource(R.string.settings),
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White,
+                    modifier = Modifier.align(Alignment.Center)
+                )
+            }
 
-            Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)) {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    Box(
-                        modifier = Modifier.fillMaxWidth(),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        if (profile.avatarUrl.isNullOrBlank()) {
+            Column(
+                modifier = Modifier.padding(horizontal = 20.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+
+                // ── Profile Section ──────────────────────────────
+                SectionHeader(icon = Icons.Default.Person, title = stringResource(R.string.profile_section))
+
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(24.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color.White),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+                ) {
+                    Column(modifier = Modifier.padding(20.dp)) {
+                        // ── Avatar + Info Row ──
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            // Avatar with camera overlay
                             Box(
                                 modifier = Modifier
-                                    .size(104.dp)
-                                    .clip(CircleShape)
-                                    .background(MaterialTheme.colorScheme.primaryContainer),
-                                contentAlignment = Alignment.Center
+                                    .size(80.dp)
+                                    .clickable(
+                                        enabled = !viewModel.isSaving,
+                                        onClick = { avatarPicker.launch("image/*") }
+                                    )
                             ) {
-                                Icon(
-                                    imageVector = Icons.Default.AccountCircle,
-                                    contentDescription = stringResource(R.string.avatar),
-                                    modifier = Modifier.size(72.dp),
-                                    tint = MaterialTheme.colorScheme.primary
+                                // Gradient ring
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .clip(CircleShape)
+                                        .background(
+                                            Brush.linearGradient(listOf(GradientStart, GradientEnd))
+                                        )
+                                        .padding(3.dp)
+                                        .clip(CircleShape)
+                                        .background(Color.White)
+                                ) {
+                                    if (profile.avatarUrl.isNullOrBlank()) {
+                                        Box(
+                                            modifier = Modifier.fillMaxSize(),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            Text(
+                                                text = profile.displayName.take(1).uppercase(),
+                                                fontSize = 30.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                color = GradientStart
+                                            )
+                                        }
+                                    } else {
+                                        AsyncImage(
+                                            model = profile.avatarUrl,
+                                            contentDescription = stringResource(R.string.avatar),
+                                            modifier = Modifier.fillMaxSize(),
+                                            contentScale = ContentScale.Crop
+                                        )
+                                    }
+                                }
+                                // Camera badge
+                                Box(
+                                    modifier = Modifier
+                                        .size(24.dp)
+                                        .align(Alignment.BottomEnd)
+                                        .clip(CircleShape)
+                                        .background(GradientStart)
+                                        .border(2.dp, MaterialTheme.colorScheme.surface, CircleShape),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        Icons.Default.CameraAlt,
+                                        contentDescription = null,
+                                        tint = Color.White,
+                                        modifier = Modifier.size(13.dp)
+                                    )
+                                }
+                            }
+
+                            Spacer(Modifier.width(16.dp))
+
+                            // Name + username info
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = profile.displayName,
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 18.sp,
+                                    color = Color(0xFF2B3A67)
+                                )
+                                Spacer(Modifier.height(2.dp))
+                                Text(
+                                    text = "@${profile.username}",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = Color(0xFF6C7BA8)
+                                )
+                                Spacer(Modifier.height(2.dp))
+                                Text(
+                                    text = profile.email,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = Color(0xFF6C7BA8)
                                 )
                             }
-                        } else {
-                            AsyncImage(
-                                model = profile.avatarUrl,
-                                contentDescription = stringResource(R.string.avatar),
-                                modifier = Modifier
-                                    .size(104.dp)
-                                    .clip(CircleShape),
-                                contentScale = ContentScale.Crop
+                        }
+
+                        Spacer(Modifier.height(20.dp))
+
+                        // ── Display Name Field ──
+                        OutlinedTextField(
+                            value = viewModel.displayName,
+                            onValueChange = viewModel::updateDisplayName,
+                            label = { Text(stringResource(R.string.display_name)) },
+                            modifier = Modifier.fillMaxWidth(),
+                            singleLine = true,
+                            shape = RoundedCornerShape(14.dp),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = GradientStart,
+                                focusedLabelColor = GradientStart
+                            )
+                        )
+
+                        Spacer(Modifier.height(14.dp))
+
+                        // ── Save Button ──
+                        Button(
+                            onClick = viewModel::saveProfile,
+                            modifier = Modifier.fillMaxWidth(),
+                            enabled = !viewModel.isSaving,
+                            shape = RoundedCornerShape(14.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = GradientStart,
+                                disabledContainerColor = GradientStart.copy(alpha = 0.5f)
+                            )
+                        ) {
+                            if (viewModel.isSaving) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(18.dp),
+                                    strokeWidth = 2.dp,
+                                    color = Color.White
+                                )
+                                Spacer(Modifier.width(8.dp))
+                                Text(stringResource(R.string.saving), color = Color.White)
+                            } else {
+                                Text(
+                                    stringResource(R.string.save_changes),
+                                    color = Color.White,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                            }
+                        }
+                    }
+                }
+
+                // ── Status Message ──────────────────────────────
+                if (viewModel.statusMessage != null) {
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(14.dp),
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.primaryContainer
+                        )
+                    ) {
+                        Text(
+                            text = viewModel.statusMessage.orEmpty(),
+                            modifier = Modifier.padding(14.dp),
+                            color = MaterialTheme.colorScheme.onPrimaryContainer,
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                    }
+                }
+
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+
+                // ── Language Section ─────────────────────────────
+                SectionHeader(icon = Icons.Default.Language, title = stringResource(R.string.appearance_section))
+
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(24.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                ) {
+                    Column(modifier = Modifier.padding(20.dp)) {
+                        Text(
+                            text = stringResource(R.string.language),
+                            fontWeight = FontWeight.SemiBold,
+                            fontSize = 15.sp,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Spacer(Modifier.height(4.dp))
+                        Text(
+                            text = stringResource(R.string.language_change_restart),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Spacer(Modifier.height(14.dp))
+                        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                            FilterChip(
+                                selected = viewModel.selectedLanguageTag == "en",
+                                onClick = {
+                                    viewModel.updateLanguage("en")
+                                    applyLanguageAndRestart(context, "en")
+                                },
+                                label = { Text(stringResource(R.string.english)) },
+                                colors = FilterChipDefaults.filterChipColors(
+                                    selectedContainerColor = GradientStart,
+                                    selectedLabelColor = Color.White
+                                )
+                            )
+                            FilterChip(
+                                selected = viewModel.selectedLanguageTag == "vi",
+                                onClick = {
+                                    viewModel.updateLanguage("vi")
+                                    applyLanguageAndRestart(context, "vi")
+                                },
+                                label = { Text(stringResource(R.string.vietnamese)) },
+                                colors = FilterChipDefaults.filterChipColors(
+                                    selectedContainerColor = GradientStart,
+                                    selectedLabelColor = Color.White
+                                )
                             )
                         }
                     }
-
-                    Spacer(modifier = Modifier.height(12.dp))
-
-                    Button(
-                        onClick = { avatarPicker.launch("image/*") },
-                        modifier = Modifier.fillMaxWidth(),
-                        enabled = !viewModel.isSaving
-                    ) {
-                        Text(stringResource(R.string.change_avatar))
-                    }
-
-                    Spacer(modifier = Modifier.height(12.dp))
-
-                    OutlinedTextField(
-                        value = viewModel.displayName,
-                        onValueChange = viewModel::updateDisplayName,
-                        label = { Text(stringResource(R.string.display_name)) },
-                        modifier = Modifier.fillMaxWidth(),
-                        singleLine = true
-                    )
-
-                    Spacer(modifier = Modifier.height(12.dp))
-
-                    Text(stringResource(R.string.current_username, profile.username))
-                    Text(stringResource(R.string.current_email, profile.email))
                 }
-            }
 
-            Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)) {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    Text(
-                        text = stringResource(R.string.language),
-                        fontWeight = FontWeight.SemiBold,
-                        color = MaterialTheme.colorScheme.onSecondaryContainer
-                    )
-                    Spacer(modifier = Modifier.height(12.dp))
-                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                        FilterChip(
-                            selected = viewModel.selectedLanguageTag == "en",
-                            onClick = { viewModel.updateLanguage("en") },
-                            label = { Text(stringResource(R.string.english)) }
-                        )
-                        FilterChip(
-                            selected = viewModel.selectedLanguageTag == "vi",
-                            onClick = { viewModel.updateLanguage("vi") },
-                            label = { Text(stringResource(R.string.vietnamese)) }
-                        )
-                    }
-                }
-            }
-
-            if (viewModel.statusMessage != null) {
-                Card(
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
-                ) {
-                    Text(
-                        text = viewModel.statusMessage.orEmpty(),
-                        modifier = Modifier.padding(16.dp),
-                        color = MaterialTheme.colorScheme.onPrimaryContainer
-                    )
-                }
-            }
-
-            Button(
-                onClick = viewModel::saveProfile,
-                modifier = Modifier.fillMaxWidth(),
-                enabled = !viewModel.isSaving
-            ) {
-                if (viewModel.isSaving) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(18.dp),
-                        strokeWidth = 2.dp,
-                        color = MaterialTheme.colorScheme.onPrimary
-                    )
-                    Spacer(modifier = Modifier.size(8.dp))
-                    Text(stringResource(R.string.saving))
-                } else {
-                    Text(stringResource(R.string.save_changes))
-                }
+                Spacer(Modifier.height(32.dp))
             }
         }
     }
 }
+
+@Composable
+private fun SectionHeader(
+    icon: ImageVector,
+    title: String
+) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            modifier = Modifier.size(20.dp),
+            tint = GradientStart
+        )
+        Spacer(Modifier.width(8.dp))
+        Text(
+            text = title,
+            fontWeight = FontWeight.Bold,
+            fontSize = 16.sp,
+            color = MaterialTheme.colorScheme.onBackground
+        )
+    }
+}
+
+private fun applyLanguageAndRestart(context: android.content.Context, tag: String) {
+    // Language is saved via sessionManager; we just need to restart the Activity
+    // so attachBaseContext picks up the new locale.
+    val intent = context.packageManager.getLaunchIntentForPackage(context.packageName)
+    intent?.addFlags(android.content.Intent.FLAG_ACTIVITY_CLEAR_TOP or android.content.Intent.FLAG_ACTIVITY_NEW_TASK or android.content.Intent.FLAG_ACTIVITY_CLEAR_TASK)
+    context.startActivity(intent)
+}
+
+
 
 private fun Uri.fileName(): String =
     lastPathSegment?.substringAfterLast('/') ?: "avatar_${System.currentTimeMillis()}.jpg"

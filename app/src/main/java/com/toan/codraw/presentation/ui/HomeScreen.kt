@@ -33,6 +33,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Brush
 import androidx.compose.material.icons.filled.Login
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Badge
 import androidx.compose.material3.Button
@@ -73,6 +74,7 @@ import com.toan.codraw.R
 import com.toan.codraw.domain.model.CompletedDrawing
 import com.toan.codraw.domain.model.UserProfile
 import com.toan.codraw.domain.repository.RoomResult
+import com.toan.codraw.presentation.viewmodel.ActiveRoomInfo
 import com.toan.codraw.presentation.viewmodel.HomeViewModel
 import com.toan.codraw.presentation.viewmodel.PublicRoomJoinState
 import com.toan.codraw.ui.theme.GradientEnd
@@ -96,6 +98,7 @@ fun HomeScreen(
     val publicRoomJoinState by viewModel.publicRoomJoinState.collectAsState()
     val profile by viewModel.profile.collectAsState()
     val showProfileSheet by viewModel.showProfileSheet.collectAsState()
+    val activeRoom by viewModel.activeRoom.collectAsState()
 
     LaunchedEffect(publicRoomJoinState) {
         val joinState = publicRoomJoinState as? PublicRoomJoinState.Success ?: return@LaunchedEffect
@@ -140,9 +143,14 @@ fun HomeScreen(
                 HeroHeader(
                     profile = profile,
                     isLoading = isLoading,
+                    activeRoom = activeRoom,
                     onAvatarClick = viewModel::openProfileSheet,
                     onSettingsClick = onOpenSettings,
-                    onLogoutClick = onLogout
+                    onLogoutClick = onLogout,
+                    onResumeRoom = {
+                        val ar = activeRoom ?: return@HeroHeader
+                        onEnterDrawingRoom(ar.roomCode, ar.playerId, ar.playerCount)
+                    }
                 )
             }
 
@@ -213,7 +221,6 @@ fun HomeScreen(
                                 color = MaterialTheme.colorScheme.onBackground
                             )
                             Spacer(Modifier.width(8.dp))
-                            // Pulsing live badge
                             LiveBadge()
                         }
                         Text(
@@ -275,9 +282,11 @@ fun HomeScreen(
 private fun HeroHeader(
     profile: UserProfile,
     isLoading: Boolean,
+    activeRoom: ActiveRoomInfo?,
     onAvatarClick: () -> Unit,
     onSettingsClick: () -> Unit,
-    onLogoutClick: () -> Unit
+    onLogoutClick: () -> Unit,
+    onResumeRoom: () -> Unit
 ) {
     Box(
         modifier = Modifier
@@ -298,7 +307,6 @@ private fun HeroHeader(
                 .statusBarsPadding()
                 .padding(horizontal = 20.dp, vertical = 16.dp)
         ) {
-            // Top bar row
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -339,12 +347,10 @@ private fun HeroHeader(
 
             Spacer(Modifier.height(20.dp))
 
-            // Profile row
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.fillMaxWidth()
             ) {
-                // Avatar — tappable
                 Box(
                     modifier = Modifier
                         .size(72.dp)
@@ -379,23 +385,60 @@ private fun HeroHeader(
                     }
                 }
 
-                Spacer(Modifier.width(16.dp))
+                // New Active room chip next to avatar
+                if (activeRoom != null) {
+                    Spacer(Modifier.width(16.dp))
+                    Surface(
+                        shape = RoundedCornerShape(20.dp),
+                        color = Color(0xFFFF6D00),
+                        shadowElevation = 2.dp,
+                        modifier = Modifier.clickable(onClick = onResumeRoom)
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            Icon(
+                                Icons.Default.PlayArrow,
+                                contentDescription = null,
+                                tint = Color.White,
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Column {
+                                Text(
+                                    text = stringResource(R.string.resume_drawing),
+                                    fontSize = 10.sp,
+                                    color = Color.White.copy(alpha = 0.9f)
+                                )
+                                Text(
+                                    text = activeRoom.roomCode,
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color.White
+                                )
+                            }
+                        }
+                    }
+                } else {
+                    Spacer(Modifier.width(16.dp))
+                }
 
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = stringResource(R.string.home_greeting, profile.displayName),
-                        fontSize = 24.sp,
+                        fontSize = 22.sp,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onBackground,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
-                    Spacer(Modifier.height(4.dp))
+                    Spacer(Modifier.height(3.dp))
                     Text(
                         text = stringResource(R.string.app_tagline),
-                        style = MaterialTheme.typography.bodyMedium,
+                        style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 2
+                        maxLines = 1
                     )
                 }
             }
@@ -409,6 +452,81 @@ private fun HeroHeader(
                     strokeWidth = 2.dp,
                     color = GradientStart
                 )
+            }
+        }
+    }
+}
+
+// ── Active Room Card ─────────────────────────────────────────────────────────
+@Composable
+private fun ActiveRoomCard(
+    activeRoom: ActiveRoomInfo,
+    onResume: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Card(
+        modifier = modifier,
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = Color.Transparent
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(
+                    Brush.linearGradient(listOf(Color(0xFFFF6D00), Color(0xFFFF9100)))
+                )
+                .padding(18.dp)
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = stringResource(R.string.active_room),
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 16.sp,
+                        color = Color.White
+                    )
+                    Text(
+                        text = stringResource(R.string.active_room_subtitle),
+                        fontSize = 12.sp,
+                        color = Color.White.copy(alpha = 0.85f)
+                    )
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        text = stringResource(R.string.room_code_label, activeRoom.roomCode),
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = Color.White,
+                        letterSpacing = 1.5.sp
+                    )
+                }
+                Button(
+                    onClick = onResume,
+                    shape = RoundedCornerShape(14.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Color.White,
+                        contentColor = Color(0xFFFF6D00)
+                    ),
+                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 10.dp)
+                ) {
+                    Icon(
+                        Icons.Default.PlayArrow,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(Modifier.width(4.dp))
+                    Text(
+                        stringResource(R.string.resume_drawing),
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 13.sp
+                    )
+                }
             }
         }
     }
@@ -490,7 +608,7 @@ private fun LiveBadge() {
         contentColor = Color.White
     ) {
         Text(
-            text = "LIVE",
+            text = stringResource(R.string.live_badge),
             fontSize = 9.sp,
             fontWeight = FontWeight.Bold,
             modifier = Modifier.padding(horizontal = 4.dp)
@@ -558,7 +676,6 @@ private fun LiveRoomCard(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.weight(1f)
             ) {
-                // Room icon with gradient
                 Surface(
                     shape = RoundedCornerShape(14.dp),
                     color = Color.Transparent,
@@ -668,7 +785,6 @@ private fun ProfileSheetContent(
             .padding(horizontal = 24.dp)
             .padding(bottom = 32.dp)
     ) {
-        // Profile info
         Row(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier.fillMaxWidth()
@@ -725,7 +841,6 @@ private fun ProfileSheetContent(
 
         Spacer(Modifier.height(20.dp))
 
-        // Quick actions
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(10.dp)
@@ -752,7 +867,6 @@ private fun ProfileSheetContent(
 
         Spacer(Modifier.height(24.dp))
 
-        // Saved drawings section
         Text(
             text = stringResource(R.string.saved_drawings),
             fontWeight = FontWeight.Bold,
