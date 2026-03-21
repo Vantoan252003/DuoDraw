@@ -1,5 +1,6 @@
 package com.toan.codraw.data.remote
 
+import com.toan.codraw.data.remote.dto.FriendChatDto
 import com.toan.codraw.data.remote.dto.ProfileResponseDto
 import com.toan.codraw.data.remote.dto.FriendshipDto
 import retrofit2.http.Header
@@ -25,7 +26,7 @@ interface FriendshipApi {
     @GET("api/friends")
     suspend fun getFriends(
         @Header("Authorization") token: String
-    ): List<ProfileResponseDto>
+    ): List<FriendChatDto>
 
     @GET("api/friends/pending")
     suspend fun getPendingRequests(

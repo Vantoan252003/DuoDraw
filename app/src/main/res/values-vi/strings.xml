@@ -161,4 +161,15 @@
     <string name="error_request_exists">Đã kết bạn hoặc đã gửi lời mời</string>
     <string name="no_friends_yet">Bạn chưa có người bạn nào.</string>
     <string name="no_friend_requests">Không có lời mời kết bạn nào.</string>
+    <string name="search">Tìm</string>
+    <string name="send_request">Gửi kết bạn</string>
+    <string name="recording">Đang ghi âm…</string>
+    <string name="voice_message">Tin nhắn thoại</string>
+    <string name="permission_required">Cần cấp quyền để ghi âm.</string>
+
+    <!-- Settings Password UI -->
+    <string name="security_section">Bảo mật</string>
+    <string name="change_password">Đổi mật khẩu</string>
+    <string name="old_password">Mật khẩu hiện tại</string>
+    <string name="new_password">Mật khẩu mới</string>
 </resources>

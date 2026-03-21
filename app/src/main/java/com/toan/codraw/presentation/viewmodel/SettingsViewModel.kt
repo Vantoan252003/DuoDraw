@@ -105,6 +105,22 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
+    fun updatePassword(oldPassword: String, newPassword: String, onSuccess: () -> Unit) {
+        viewModelScope.launch {
+            isSaving = true
+            profileRepository.updatePassword(oldPassword, newPassword).fold(
+                onSuccess = {
+                    statusMessage = "Password updated successfully."
+                    onSuccess()
+                },
+                onFailure = {
+                    statusMessage = it.message ?: "Could not update password"
+                }
+            )
+            isSaving = false
+        }
+    }
+
     private fun applyProfile(profile: UserProfile) {
         _profile.value = profile
         displayName = profile.displayName

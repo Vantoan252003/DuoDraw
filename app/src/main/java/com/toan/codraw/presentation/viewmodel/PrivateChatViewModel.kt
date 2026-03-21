@@ -24,6 +24,14 @@ class PrivateChatViewModel @Inject constructor(
         currentFriendUsername = friendUsername
         loadChatHistory()
         listenForMessages()
+        markMessagesAsRead()
+    }
+
+    private fun markMessagesAsRead() {
+        if (currentFriendUsername.isBlank()) return
+        viewModelScope.launch {
+            chatRepository.markAsRead(currentFriendUsername)
+        }
     }
 
     private fun loadChatHistory() {
@@ -41,6 +49,9 @@ class PrivateChatViewModel @Inject constructor(
                 if (msg.senderUsername == currentFriendUsername || msg.receiverUsername == currentFriendUsername) {
                     if (chatMessages.none { it.id == msg.id }) {
                         chatMessages.add(msg)
+                        if (msg.senderUsername == currentFriendUsername) {
+                            markMessagesAsRead()
+                        }
                     }
                 }
             }
@@ -54,6 +65,29 @@ class PrivateChatViewModel @Inject constructor(
                 if (chatMessages.none { it.id == msg.id }) {
                     chatMessages.add(msg)
                 }
+            }
+        }
+    }
+
+    fun sendVoiceMessage(audioFile: java.io.File) {
+        viewModelScope.launch {
+            try {
+                val bytes = audioFile.readBytes()
+                chatRepository.sendVoiceMessage(
+                    receiverUsername = currentFriendUsername,
+                    fileName = audioFile.name,
+                    bytes = bytes,
+                    mimeType = "audio/webm"
+                ).onSuccess { msg ->
+                    if (chatMessages.none { it.id == msg.id }) {
+                        chatMessages.add(msg)
+                    }
+                    audioFile.delete()
+                }.onFailure {
+                    audioFile.delete()
+                }
+            } catch (e: Exception) {
+                audioFile.delete()
             }
         }
     }

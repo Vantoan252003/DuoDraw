@@ -5,5 +5,6 @@ data class ChatMessageResponseDto(
     val senderUsername: String,
     val receiverUsername: String,
     val content: String,
+    val type: String,
     val timestamp: String
 )

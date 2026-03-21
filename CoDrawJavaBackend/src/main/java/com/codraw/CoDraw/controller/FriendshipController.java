@@ -1,6 +1,7 @@
 package com.codraw.CoDraw.controller;
 
 import com.codraw.CoDraw.dto.FriendshipDto;
+import com.codraw.CoDraw.dto.FriendChatResponse;
 import com.codraw.CoDraw.dto.ProfileResponse;
 import com.codraw.CoDraw.service.FriendshipService;
 import lombok.RequiredArgsConstructor;
@@ -27,7 +28,7 @@ public class FriendshipController {
     }
 
     @GetMapping
-    public ResponseEntity<List<ProfileResponse>> getFriends(Authentication auth) {
+    public ResponseEntity<List<FriendChatResponse>> getFriends(Authentication auth) {
         return ResponseEntity.ok(friendshipService.getFriends(auth.getName()));
     }
 

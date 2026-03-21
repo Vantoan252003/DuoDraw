@@ -4,6 +4,7 @@ import androidx.compose.runtime.mutableStateListOf
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.toan.codraw.data.remote.GlobalWebSocketManager
+import com.toan.codraw.data.remote.dto.FriendChatDto
 import com.toan.codraw.data.remote.dto.FriendshipDto
 import com.toan.codraw.data.remote.dto.ProfileResponseDto
 import com.toan.codraw.presentation.util.UiText
@@ -12,16 +13,29 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import javax.inject.Inject
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import com.toan.codraw.domain.model.UserProfile
+import com.toan.codraw.domain.repository.ProfileRepository
 
 @HiltViewModel
 class FriendsViewModel @Inject constructor(
     private val friendshipRepository: FriendshipRepository,
+    private val profileRepository: ProfileRepository,
     private val globalWebSocketManager: GlobalWebSocketManager
 ) : ViewModel() {
 
-    val friendsList = mutableStateListOf<ProfileResponseDto>()
+    val friendsList = mutableStateListOf<FriendChatDto>()
     val pendingRequests = mutableStateListOf<FriendshipDto>()
     val sentRequests = mutableStateListOf<FriendshipDto>()
+
+    var searchedProfile by mutableStateOf<UserProfile?>(null)
+        private set
+    var isSearching by mutableStateOf(false)
+        private set
+    var searchError by mutableStateOf<UiText?>(null)
+        private set
 
     init {
         loadFriendsData()
@@ -61,6 +75,28 @@ class FriendsViewModel @Inject constructor(
                 onError(mapErrorToUiText(it))
             }
         }
+    }
+
+    fun searchProfile(username: String) {
+        if (username.isBlank()) return
+        viewModelScope.launch {
+            isSearching = true
+            searchError = null
+            searchedProfile = null
+            profileRepository.getProfileByUsername(username.trim())
+                .onSuccess { profile ->
+                    searchedProfile = profile
+                }
+                .onFailure {
+                    searchError = mapErrorToUiText(it)
+                }
+            isSearching = false
+        }
+    }
+
+    fun clearSearch() {
+        searchedProfile = null
+        searchError = null
     }
 
     private fun mapErrorToUiText(error: Throwable): UiText {

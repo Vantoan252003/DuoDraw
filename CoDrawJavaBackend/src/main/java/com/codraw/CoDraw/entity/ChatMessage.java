@@ -27,8 +27,15 @@ public class ChatMessage {
     @Column(nullable = false, length = 2000)
     private String content;
 
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private MessageType type = MessageType.TEXT;
+
     @Column(nullable = false)
     private LocalDateTime timestamp;
+
+    @Column(name = "is_read", nullable = false)
+    private boolean isRead = false;
 
     @PrePersist
     protected void onCreate() {

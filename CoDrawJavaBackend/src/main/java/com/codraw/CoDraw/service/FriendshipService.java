@@ -2,12 +2,17 @@ package com.codraw.CoDraw.service;
 
 import com.codraw.CoDraw.dto.FriendshipDto;
 import com.codraw.CoDraw.dto.ProfileResponse;
+import com.codraw.CoDraw.dto.FriendChatResponse;
+import com.codraw.CoDraw.dto.ChatMessageResponse;
+import com.codraw.CoDraw.entity.ChatMessage;
 import com.codraw.CoDraw.entity.Friendship;
 import com.codraw.CoDraw.entity.FriendshipStatus;
 import com.codraw.CoDraw.entity.User;
 import com.codraw.CoDraw.repository.FriendshipRepository;
 import com.codraw.CoDraw.repository.UserRepository;
+import com.codraw.CoDraw.repository.ChatMessageRepository;
 import com.codraw.CoDraw.handler.GlobalWebSocketHandler;
+import org.springframework.data.domain.PageRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -21,6 +26,7 @@ import java.util.stream.Collectors;
 public class FriendshipService {
     private final FriendshipRepository friendshipRepository;
     private final UserRepository userRepository;
+    private final ChatMessageRepository chatMessageRepository;
     private final GlobalWebSocketHandler globalWebSocketHandler;
 
     @Transactional
@@ -68,15 +74,24 @@ public class FriendshipService {
     }
 
     @Transactional(readOnly = true)
-    public List<ProfileResponse> getFriends(String username) {
+    public List<FriendChatResponse> getFriends(String username) {
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
                 
         List<Friendship> friendships = friendshipRepository.findAllByUserAndStatus(user, FriendshipStatus.ACCEPTED);
         
         return friendships.stream()
-                .map(f -> f.getRequester().equals(user) ? f.getReceiver() : f.getRequester())
-                .map(ProfileResponse::fromUser)
+                .map(f -> {
+                    User friend = f.getRequester().equals(user) ? f.getReceiver() : f.getRequester();
+                    ProfileResponse profile = ProfileResponse.fromUser(friend);
+                    
+                    List<ChatMessage> lastMsgs = chatMessageRepository.findLastMessage(user, friend, PageRequest.of(0, 1));
+                    ChatMessageResponse lastMsgDto = lastMsgs.isEmpty() ? null : ChatMessageResponse.fromEntity(lastMsgs.get(0));
+                    
+                    int unreadCount = chatMessageRepository.countUnreadMessages(friend, user);
+                    
+                    return new FriendChatResponse(profile, lastMsgDto, unreadCount);
+                })
                 .collect(Collectors.toList());
     }
 

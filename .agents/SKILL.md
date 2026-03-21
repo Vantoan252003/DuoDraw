@@ -55,6 +55,12 @@ CoDraw/
 | GET | `/api/drawings/mine` | JWT | Get user's completed drawings |
 | POST | `/api/drawings/complete` | JWT | Save completed drawing |
 | GET | `/api/drawings/{roomCode}` | JWT | Get specific completed drawing |
+| GET | `/api/profile/{username}` | JWT | Get user profile by username (Search) |
+| POST | `/api/chat/{receiverUsername}` | JWT | Send text message |
+| POST | `/api/chat/voice/{receiverUsername}` | JWT | Upload voice message (Cloudinary) |
+| GET | `/api/chat/{friendUsername}` | JWT | Get private chat history |
+| GET | `/api/friends`, `/api/friends/requests/pending`, `/api/friends/requests/sent` | JWT | Friendship management |
+| POST | `/api/friends/request`, `/api/friends/respond` | JWT | Send/Respond to friend requests |
 
 ### WebSocket
 
@@ -67,12 +73,16 @@ CoDraw/
   - `UNDO` → removes last stroke of player from Redis + broadcast
   - `COMPLETE_REQUEST/RESPONSE/FINALIZED/CANCELLED` → relay only (completion flow)
   - `JOIN` → server sends back stroke history from Redis
+  - `CHAT` → relay private chat messages (TEXT/VOICE)
+  - `FRIEND_REQUEST/FRIEND_ACCEPT` → relay friend system events
 
 ### Data Model
 
 - **User** (`users`) — id, username, email, password (BCrypt), displayName, avatarUrl
 - **Room** (`rooms`) — id, roomCode (6 chars), hostUsername, guestUsername, status (WAITING→PLAYING→FINISHED), roomType (PUBLIC/PRIVATE), createdAt
 - **CompletedDrawing** (`completed_drawings`) — id, roomCode, hostUsername, guestUsername, roomType, savedByUsername, strokeCount, strokesJson (LONGTEXT), completedAt
+- **ChatMessage** (`chat_messages`) — id, senderUsername, receiverUsername, content, type (TEXT/VOICE), timestamp
+- **Friendship** (`friendships`) — id, requester_id, receiver_id, status (PENDING/ACCEPTED)
 
 ### Canvas State (Redis)
 
@@ -135,6 +145,8 @@ JWT config in `application.properties`: `app.jwt.secret`, `app.jwt.expiration-ms
 - **Collapsible drawing tools:** Vertical side panel with animated expand/collapse
 - **Bilingual:** All strings in `values/strings.xml` (EN) and `values-vi/strings.xml` (VI)
 - **Language restart:** Changing language in Settings kills process and relaunches app
+- **Voice Messages:** Record via `MediaRecorder` (`AudioRecorderHelper`), upload to Cloudinary, play via `MediaPlayer` (`AudioPlayerHelper`)
+- **Friend System:** Search by username, send friend requests, real-time push events via WebSocket, private chat room UI
 
 ### Build Commands
 

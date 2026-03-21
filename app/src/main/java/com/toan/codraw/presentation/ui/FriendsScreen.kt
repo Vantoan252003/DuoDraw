@@ -1,5 +1,7 @@
 package com.toan.codraw.presentation.ui
 
+import androidx.compose.ui.window.Dialog
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -29,6 +31,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.toan.codraw.R
+import com.toan.codraw.data.remote.dto.FriendChatDto
 import com.toan.codraw.data.remote.dto.FriendshipDto
 import com.toan.codraw.data.remote.dto.ProfileResponseDto
 import com.toan.codraw.presentation.util.UiText
@@ -168,10 +171,10 @@ fun FriendsScreen(
                         }
                     }
                 } else {
-                    items(friends) { friend ->
+                    items(friends) { friendChat ->
                         FriendItemUI(
-                            friend = friend,
-                            onClick = { onNavigateToChat(friend.username) }
+                            friendChat = friendChat,
+                            onClick = { onNavigateToChat(friendChat.friend.username) }
                         )
                     }
                 }
@@ -180,48 +183,118 @@ fun FriendsScreen(
     }
 
     if (showAddDialog) {
-        AlertDialog(
-            onDismissRequest = { showAddDialog = false },
-            title = { Text(stringResource(R.string.add_friend), fontWeight = FontWeight.Bold) },
-            text = {
-                OutlinedTextField(
-                    value = targetUsername,
-                    onValueChange = { targetUsername = it },
-                    label = { Text(stringResource(R.string.username)) },
-                    singleLine = true,
-                    leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp)
-                )
-            },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        if (targetUsername.isNotBlank()) {
-                            viewModel.sendFriendRequest(
-                                username = targetUsername,
-                                onSuccess = {
-                                    showAddDialog = false
-                                    targetUsername = ""
-                                    viewModel.loadFriendsData()
-                                    showSuccessDialog = true
-                                },
-                                onError = { uiTextError ->
-                                    errorDialogText = uiTextError
-                                }
-                            )
+        Dialog(onDismissRequest = { 
+            showAddDialog = false 
+            viewModel.clearSearch()
+        }) {
+            Surface(
+                shape = RoundedCornerShape(16.dp),
+                color = MaterialTheme.colorScheme.surface,
+                tonalElevation = 6.dp
+            ) {
+                Column(
+                    modifier = Modifier.padding(24.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(
+                        text = stringResource(R.string.add_friend),
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 20.sp,
+                        modifier = Modifier.padding(bottom = 16.dp)
+                    )
+                    OutlinedTextField(
+                        value = targetUsername,
+                        onValueChange = { 
+                            targetUsername = it
+                            viewModel.clearSearch() 
+                        },
+                        label = { Text(stringResource(R.string.username)) },
+                        singleLine = true,
+                        leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp)
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    val searchedProfile = viewModel.searchedProfile
+                    val searchError = viewModel.searchError
+                    val isSearching = viewModel.isSearching
+
+                    if (isSearching) {
+                        CircularProgressIndicator(modifier = Modifier.size(32.dp))
+                    } else if (searchError != null) {
+                        Text(searchError.asString(context), color = MaterialTheme.colorScheme.error, fontSize = 14.sp)
+                    } else if (searchedProfile == null) {
+                        Button(
+                            onClick = { 
+                                viewModel.searchProfile(targetUsername)
+                            },
+                            modifier = Modifier.fillMaxWidth(),
+                            enabled = targetUsername.isNotBlank()
+                        ) {
+                            Text(stringResource(R.string.search))
                         }
                     }
-                ) {
-                    Text(stringResource(R.string.send))
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showAddDialog = false }) {
-                    Text(stringResource(R.string.cancel))
+
+                    if (searchedProfile != null) {
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(48.dp)
+                                    .clip(CircleShape)
+                                    .background(MaterialTheme.colorScheme.primary),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = searchedProfile.displayName.take(1).uppercase(),
+                                    color = MaterialTheme.colorScheme.onPrimary,
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 18.sp
+                                )
+                            }
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(searchedProfile.displayName, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                                Text("@${searchedProfile.username}", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                        }
+                        Spacer(modifier = Modifier.height(24.dp))
+                        Button(
+                            onClick = {
+                                viewModel.sendFriendRequest(
+                                    username = searchedProfile.username,
+                                    onSuccess = {
+                                        showAddDialog = false
+                                        targetUsername = ""
+                                        viewModel.clearSearch()
+                                        viewModel.loadFriendsData()
+                                        showSuccessDialog = true
+                                    },
+                                    onError = { uiTextError ->
+                                        errorDialogText = uiTextError
+                                    }
+                                )
+                            },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text(stringResource(R.string.send_request))
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(8.dp))
+                    TextButton(onClick = { 
+                        showAddDialog = false
+                        viewModel.clearSearch()
+                    }) {
+                        Text(stringResource(R.string.cancel))
+                    }
                 }
             }
-        )
+        }
     }
 
     errorDialogText?.let { uiText ->
@@ -253,7 +326,8 @@ fun FriendsScreen(
 }
 
 @Composable
-fun FriendItemUI(friend: ProfileResponseDto, onClick: () -> Unit) {
+fun FriendItemUI(friendChat: FriendChatDto, onClick: () -> Unit) {
+    val friend = friendChat.friend
     Card(
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
@@ -282,9 +356,27 @@ fun FriendItemUI(friend: ProfileResponseDto, onClick: () -> Unit) {
                 )
             }
             Spacer(Modifier.width(16.dp))
-            Column {
+            Column(modifier = Modifier.weight(1f)) {
                 Text(text = friend.displayName, fontWeight = FontWeight.Bold, fontSize = 16.sp)
-                Text(text = "@${friend.username}", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                if (friendChat.lastMessage != null) {
+                    val msgText = if (friendChat.lastMessage.type == "VOICE") "[Voice message]" else friendChat.lastMessage.content
+                    val fw = if (friendChat.unreadCount > 0) FontWeight.Bold else FontWeight.Normal
+                    Text(text = msgText, maxLines = 1, style = MaterialTheme.typography.bodyMedium, fontWeight = fw, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                } else {
+                    Text(text = "@${friend.username}", maxLines = 1, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
+            if (friendChat.unreadCount > 0) {
+                Spacer(Modifier.width(8.dp))
+                Box(
+                    modifier = Modifier
+                        .size(24.dp)
+                        .clip(CircleShape)
+                        .background(Color.Red),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(text = friendChat.unreadCount.toString(), color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                }
             }
         }
     }

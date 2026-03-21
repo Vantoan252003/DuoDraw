@@ -7,6 +7,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
+import org.springframework.web.multipart.MultipartFile;
+
 import java.util.List;
 
 @RestController
@@ -23,5 +25,20 @@ public class ChatController {
     @PostMapping("/{receiverUsername}")
     public ResponseEntity<ChatMessageResponse> sendMessage(Authentication auth, @PathVariable String receiverUsername, @RequestBody String content) {
         return ResponseEntity.ok(chatService.saveMessage(auth.getName(), receiverUsername, content));
+    }
+
+    @PostMapping("/voice/{receiverUsername}")
+    public ResponseEntity<ChatMessageResponse> sendVoiceMessage(
+            Authentication auth, 
+            @PathVariable String receiverUsername, 
+            @RequestParam("audio") MultipartFile audio
+    ) {
+        return ResponseEntity.ok(chatService.saveVoiceMessage(auth.getName(), receiverUsername, audio));
+    }
+
+    @PutMapping("/read/{senderUsername}")
+    public ResponseEntity<Void> markAsRead(Authentication auth, @PathVariable String senderUsername) {
+        chatService.markMessagesAsRead(auth.getName(), senderUsername);
+        return ResponseEntity.ok().build();
     }
 }

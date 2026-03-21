@@ -161,4 +161,15 @@
     <string name="error_request_exists">Friendship or request already exists</string>
     <string name="no_friends_yet">You have no friends yet.</string>
     <string name="no_friend_requests">No pending friend requests.</string>
+    <string name="search">Search</string>
+    <string name="send_request">Send Request</string>
+    <string name="recording">Recording…</string>
+    <string name="voice_message">Voice message</string>
+    <string name="permission_required">Permission required to record audio.</string>
+
+    <!-- Settings Password UI -->
+    <string name="security_section">Security</string>
+    <string name="change_password">Change Password</string>
+    <string name="old_password">Current Password</string>
+    <string name="new_password">New Password</string>
 </resources>

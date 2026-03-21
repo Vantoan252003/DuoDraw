@@ -2,6 +2,7 @@ package com.toan.codraw.data.repository
 
 import com.toan.codraw.data.remote.FriendshipApi
 import com.toan.codraw.data.remote.dto.FriendshipDto
+import com.toan.codraw.data.remote.dto.FriendChatDto
 import com.toan.codraw.data.remote.dto.ProfileResponseDto
 import com.toan.codraw.data.local.SessionManager
 import com.toan.codraw.domain.repository.FriendshipRepository
@@ -39,7 +40,7 @@ class FriendshipRepositoryImpl @Inject constructor(
         }
     }
 
-    override suspend fun getFriends(): Result<List<ProfileResponseDto>> {
+    override suspend fun getFriends(): Result<List<FriendChatDto>> {
         return withContext(Dispatchers.IO) {
             try {
                 Result.success(api.getFriends(getToken()))

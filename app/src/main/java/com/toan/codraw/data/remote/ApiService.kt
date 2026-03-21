@@ -8,8 +8,10 @@ import com.toan.codraw.data.remote.dto.LoginRequest
 import com.toan.codraw.data.remote.dto.ProfileResponse
 import com.toan.codraw.data.remote.dto.RegisterRequest
 import com.toan.codraw.data.remote.dto.RoomResponse
+import com.toan.codraw.data.remote.dto.UpdatePasswordRequest
 import com.toan.codraw.data.remote.dto.UpdateProfileRequest
 import okhttp3.MultipartBody
+import okhttp3.ResponseBody
 import retrofit2.Response
 import retrofit2.http.Body
 import retrofit2.http.GET
@@ -79,10 +81,30 @@ interface ApiService {
         @Body request: UpdateProfileRequest
     ): Response<ProfileResponse>
 
+    @PUT("api/profile/password")
+    suspend fun updatePassword(
+        @Header("Authorization") token: String,
+        @Body request: UpdatePasswordRequest
+    ): Response<ResponseBody>
+
     @Multipart
     @POST("api/profile/avatar")
     suspend fun uploadAvatar(
         @Header("Authorization") token: String,
         @Part avatar: MultipartBody.Part
     ): Response<ProfileResponse>
+
+    @GET("api/profile/{username}")
+    suspend fun getProfileByUsername(
+        @Header("Authorization") token: String,
+        @Path("username") username: String
+    ): Response<ProfileResponse>
+
+    @Multipart
+    @POST("api/chat/voice/{receiverUsername}")
+    suspend fun uploadVoiceMessage(
+        @Header("Authorization") token: String,
+        @Path("receiverUsername") receiverUsername: String,
+        @Part audio: MultipartBody.Part
+    ): Response<com.toan.codraw.data.remote.dto.ChatMessageResponseDto>
 }

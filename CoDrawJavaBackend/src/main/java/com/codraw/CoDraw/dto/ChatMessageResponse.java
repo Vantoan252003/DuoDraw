@@ -4,7 +4,7 @@ import com.codraw.CoDraw.entity.ChatMessage;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 
-import java.time.LocalDateTime;
+
 
 @Data
 @AllArgsConstructor
@@ -13,7 +13,8 @@ public class ChatMessageResponse {
     private String senderUsername;
     private String receiverUsername;
     private String content;
-    private LocalDateTime timestamp;
+    private String type;
+    private String timestamp;
     
     public static ChatMessageResponse fromEntity(ChatMessage msg) {
         return new ChatMessageResponse(
@@ -21,7 +22,8 @@ public class ChatMessageResponse {
                 msg.getSender().getUsername(),
                 msg.getReceiver().getUsername(),
                 msg.getContent(),
-                msg.getTimestamp()
+                msg.getType().name(),
+                msg.getTimestamp() != null ? msg.getTimestamp().toString() : null
         );
     }
 }

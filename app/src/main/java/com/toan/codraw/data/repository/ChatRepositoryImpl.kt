@@ -6,6 +6,8 @@ import com.toan.codraw.data.local.SessionManager
 import com.toan.codraw.domain.repository.ChatRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import okhttp3.MediaType.Companion.toMediaTypeOrNull
+import okhttp3.RequestBody.Companion.toRequestBody
 import javax.inject.Inject
 
 class ChatRepositoryImpl @Inject constructor(
@@ -35,6 +37,30 @@ class ChatRepositoryImpl @Inject constructor(
             } catch (e: Exception) {
                 Result.failure(e)
             }
+        }
+    }
+
+    override suspend fun sendVoiceMessage(
+        receiverUsername: String,
+        fileName: String,
+        bytes: ByteArray,
+        mimeType: String
+    ): Result<ChatMessageResponseDto> = withContext(Dispatchers.IO) {
+        try {
+            val requestBody = bytes.toRequestBody(mimeType.toMediaTypeOrNull())
+            val part = okhttp3.MultipartBody.Part.createFormData("audio", fileName, requestBody)
+            Result.success(api.uploadVoiceMessage(getToken(), receiverUsername, part))
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    override suspend fun markAsRead(senderUsername: String): Result<Unit> = withContext(Dispatchers.IO) {
+        try {
+            api.markAsRead(getToken(), senderUsername)
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
         }
     }
 }

@@ -5,7 +5,7 @@ import com.codraw.CoDraw.dto.RoomResponse;
 import com.codraw.CoDraw.entity.User;
 import com.codraw.CoDraw.service.RoomService;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
@@ -24,11 +24,11 @@ public class RoomController {
     /** POST /api/rooms/create  (yeu cau JWT) */
     @PostMapping("/create")
     public ResponseEntity<?> createRoom(
-            @AuthenticationPrincipal User user,
+            Authentication auth,
             @RequestBody(required = false) CreateRoomRequest request) {
         try {
             String roomType = request != null ? request.getRoomType() : null;
-            RoomResponse room = roomService.createRoom(user.getUsername(), roomType);
+            RoomResponse room = roomService.createRoom(auth.getName(), roomType);
             return ResponseEntity.ok(room);
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
@@ -49,9 +49,9 @@ public class RoomController {
     @PostMapping("/join")
     public ResponseEntity<?> joinRoom(
             @RequestParam String code,
-            @AuthenticationPrincipal User user) {
+            Authentication auth) {
         try {
-            RoomResponse room = roomService.joinRoom(code, user.getUsername());
+            RoomResponse room = roomService.joinRoom(code, auth.getName());
             return ResponseEntity.ok(room);
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));

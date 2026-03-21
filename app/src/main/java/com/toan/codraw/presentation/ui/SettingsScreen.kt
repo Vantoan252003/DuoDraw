@@ -27,7 +27,9 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.Language
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -45,6 +47,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -71,6 +76,7 @@ fun SettingsScreen(
 ) {
     val profile by viewModel.profile.collectAsState()
     val context = LocalContext.current
+    var showPasswordDialog by remember { mutableStateOf(false) }
 
     val avatarPicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
         if (uri != null) {
@@ -354,12 +360,79 @@ fun SettingsScreen(
                     }
                 }
 
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+
+                // ── Security Section ─────────────────────────────
+                SectionHeader(icon = Icons.Default.Lock, title = stringResource(R.string.security_section))
+
+                Card(
+                    modifier = Modifier.fillMaxWidth().clickable { showPasswordDialog = true },
+                    shape = RoundedCornerShape(24.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                ) {
+                    Column(modifier = Modifier.padding(20.dp)) {
+                        Text(
+                            text = stringResource(R.string.change_password),
+                            fontWeight = FontWeight.SemiBold,
+                            fontSize = 15.sp,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                    }
+                }
+
                 Spacer(Modifier.height(32.dp))
             }
         }
+
+        if (showPasswordDialog) {
+            var oldPassword by remember { mutableStateOf("") }
+            var newPassword by remember { mutableStateOf("") }
+            
+            AlertDialog(
+                onDismissRequest = { showPasswordDialog = false },
+                title = {
+                    Text(text = stringResource(R.string.change_password))
+                },
+                text = {
+                    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                        OutlinedTextField(
+                            value = oldPassword,
+                            onValueChange = { oldPassword = it },
+                            label = { Text(stringResource(R.string.old_password)) },
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        OutlinedTextField(
+                            value = newPassword,
+                            onValueChange = { newPassword = it },
+                            label = { Text(stringResource(R.string.new_password)) },
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+                },
+                confirmButton = {
+                    Button(
+                        onClick = {
+                            viewModel.updatePassword(oldPassword, newPassword) {
+                                showPasswordDialog = false
+                            }
+                        },
+                        enabled = oldPassword.isNotBlank() && newPassword.isNotBlank() && !viewModel.isSaving
+                    ) {
+                        Text(stringResource(R.string.save))
+                    }
+                },
+                dismissButton = {
+                    Button(onClick = { showPasswordDialog = false }) {
+                        Text(stringResource(R.string.cancel))
+                    }
+                }
+            )
+        }
     }
 }
-
 @Composable
 private fun SectionHeader(
     icon: ImageVector,
