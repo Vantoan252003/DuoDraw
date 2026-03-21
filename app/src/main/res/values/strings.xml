@@ -142,4 +142,23 @@
     <string name="msg_completion_failed">Completion failed. Please try again.</string>
     <string name="msg_completed_success">Both players agreed. The drawing has been completed.</string>
     <string name="msg_saved_strokes">Saved %1$d strokes for room %2$s.</string>
+
+    <!-- Friends & Chat -->
+    <string name="friends">Friends</string>
+    <string name="friends_and_chat">Friends &amp; Chat</string>
+    <string name="chat_friend_subtitle">Manage friends and start private chats</string>
+    <string name="add_friend">Add Friend</string>
+    <string name="friend_requests">Friend Requests (%1$d)</string>
+    <string name="sent_requests">Sent requests (%1$d)</string>
+    <string name="my_friends">My Friends (%1$d)</string>
+    <string name="request_sent">Request sent!</string>
+    <string name="accept">Accept</string>
+    <string name="reject">Reject</string>
+    <string name="message">Message</string>
+    <string name="send">Send</string>
+    <string name="error_user_not_found">User not found</string>
+    <string name="error_cannot_add_self">Cannot send friend request to yourself</string>
+    <string name="error_request_exists">Friendship or request already exists</string>
+    <string name="no_friends_yet">You have no friends yet.</string>
+    <string name="no_friend_requests">No pending friend requests.</string>
 </resources>

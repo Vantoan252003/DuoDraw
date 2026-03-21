@@ -43,7 +43,8 @@ public class DrawingWebSocketHandler extends TextWebSocketHandler {
             "COMPLETE_FINALIZED",
             "COMPLETE_CANCELLED",
             "VIEWPORT",
-            "UNDO"
+            "UNDO",
+            "CHAT"
     );
 
     // roomCode -> Set<ConcurrentWebSocketSessionDecorator>

@@ -25,6 +25,9 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.Badge
+import androidx.compose.material3.BadgedBox
+import androidx.compose.material.icons.filled.ChatBubble
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -33,6 +36,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -42,6 +46,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.toan.codraw.R
+import com.toan.codraw.presentation.components.ChatOverlay
 import com.toan.codraw.presentation.components.DrawingCanvas
 import com.toan.codraw.presentation.components.DrawingTools
 import com.toan.codraw.presentation.viewmodel.DrawingViewModel
@@ -80,6 +85,8 @@ fun DrawingScreen(
     }
 
     BackHandler(onBack = onNavigateBack)
+
+    var isChatOpen by remember { androidx.compose.runtime.mutableStateOf(false) }
 
     val currentPath1 by viewModel.currentPath1
     val currentPath2 by viewModel.currentPath2
@@ -195,22 +202,52 @@ fun DrawingScreen(
                 }
             }
 
-            if (roomCode.isNotBlank() && localPlayerId == 1) {
-                Button(onClick = viewModel::onCompleteClicked, enabled = viewModel.canRequestCompletion) {
-                    if (isCompleting) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(16.dp),
-                            strokeWidth = 2.dp,
-                            color = MaterialTheme.colorScheme.onPrimary
-                        )
-                    } else {
-                        Text(
-                            when {
-                                isCompleted -> stringResource(R.string.completed)
-                                awaitingGuestApproval -> stringResource(R.string.pending)
-                                else -> stringResource(R.string.complete)
+            if (roomCode.isNotBlank()) {
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(16.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    IconButton(
+                        onClick = {
+                            isChatOpen = !isChatOpen
+                            if (isChatOpen) {
+                                viewModel.markMessagesAsRead()
                             }
+                        },
+                        modifier = Modifier.background(
+                            MaterialTheme.colorScheme.surface.copy(alpha = 0.94f),
+                            MaterialTheme.shapes.medium
                         )
+                    ) {
+                        BadgedBox(
+                            badge = {
+                                if (viewModel.hasUnreadMessages.value && !isChatOpen) {
+                                    Badge { Text("") }
+                                }
+                            }
+                        ) {
+                            Icon(Icons.Default.ChatBubble, contentDescription = "Chat", tint = MaterialTheme.colorScheme.primary)
+                        }
+                    }
+
+                    if (localPlayerId == 1) {
+                        Button(onClick = viewModel::onCompleteClicked, enabled = viewModel.canRequestCompletion) {
+                            if (isCompleting) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(16.dp),
+                                    strokeWidth = 2.dp,
+                                    color = MaterialTheme.colorScheme.onPrimary
+                                )
+                            } else {
+                                Text(
+                                    when {
+                                        isCompleted -> stringResource(R.string.completed)
+                                        awaitingGuestApproval -> stringResource(R.string.pending)
+                                        else -> stringResource(R.string.complete)
+                                    }
+                                )
+                            }
+                        }
                     }
                 }
             }
@@ -249,6 +286,18 @@ fun DrawingScreen(
                     .align(Alignment.CenterStart)
                     .navigationBarsPadding()
                     .padding(start = 0.dp, top = 60.dp, bottom = 12.dp)
+            )
+        }
+
+        if (isChatOpen) {
+            ChatOverlay(
+                messages = viewModel.chatMessages,
+                localPlayerId = localPlayerId,
+                onSendMessage = viewModel::sendChatMessage,
+                onClose = { isChatOpen = false },
+                modifier = Modifier
+                    .align(Alignment.CenterEnd)
+                    .padding(end = 16.dp, top = 60.dp, bottom = 16.dp)
             )
         }
     }

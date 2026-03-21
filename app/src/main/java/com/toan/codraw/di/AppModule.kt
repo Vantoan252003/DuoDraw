@@ -11,10 +11,16 @@ import com.toan.codraw.data.repository.AuthRepositoryImpl
 import com.toan.codraw.data.repository.DrawingRepositoryImpl
 import com.toan.codraw.data.repository.ProfileRepositoryImpl
 import com.toan.codraw.data.repository.RoomRepositoryImpl
+import com.toan.codraw.data.repository.FriendshipRepositoryImpl
+import com.toan.codraw.data.repository.ChatRepositoryImpl
 import com.toan.codraw.domain.repository.AuthRepository
 import com.toan.codraw.domain.repository.DrawingRepository
 import com.toan.codraw.domain.repository.ProfileRepository
 import com.toan.codraw.domain.repository.RoomRepository
+import com.toan.codraw.domain.repository.FriendshipRepository
+import com.toan.codraw.domain.repository.ChatRepository
+import com.toan.codraw.data.remote.FriendshipApi
+import com.toan.codraw.data.remote.ChatApi
 import dagger.Binds
 import dagger.Module
 import dagger.Provides
@@ -67,6 +73,16 @@ object NetworkModule {
 
     @Provides
     @Singleton
+    fun provideFriendshipApi(retrofit: Retrofit): FriendshipApi =
+        retrofit.create(FriendshipApi::class.java)
+
+    @Provides
+    @Singleton
+    fun provideChatApi(retrofit: Retrofit): ChatApi =
+        retrofit.create(ChatApi::class.java)
+
+    @Provides
+    @Singleton
     fun provideDrawingWebSocketListener(gson: Gson): DrawingWebSocketListener =
         DrawingWebSocketListener(gson)
 
@@ -97,4 +113,12 @@ abstract class RepositoryModule {
     @Binds
     @Singleton
     abstract fun bindProfileRepository(impl: ProfileRepositoryImpl): ProfileRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindFriendshipRepository(impl: FriendshipRepositoryImpl): FriendshipRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindChatRepository(impl: ChatRepositoryImpl): ChatRepository
 }

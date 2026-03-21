@@ -88,6 +88,7 @@ fun HomeScreen(
     onEnterDrawingRoom: (roomCode: String, playerId: Int, playerCount: Int) -> Unit,
     onOpenSavedDrawing: (String) -> Unit,
     onOpenSettings: () -> Unit,
+    onNavigateToFriends: () -> Unit,
     onLogout: () -> Unit = {},
     viewModel: HomeViewModel = hiltViewModel()
 ) {
@@ -177,6 +178,21 @@ fun HomeScreen(
                         gradientColors = listOf(Color(0xFF00B4D8), GradientMint),
                         onClick = { onNavigateToRoom(null) },
                         modifier = Modifier.weight(1f)
+                    )
+                }
+                Spacer(modifier = Modifier.height(14.dp))
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 20.dp),
+                ) {
+                    ActionCard(
+                        title = "Friends & Chat",
+                        subtitle = "Manage friends and message privately",
+                        icon = Icons.Default.Person,
+                        gradientColors = listOf(Color(0xFF8E2DE2), Color(0xFF4A00E0)),
+                        onClick = onNavigateToFriends,
+                        modifier = Modifier.fillMaxWidth()
                     )
                 }
             }

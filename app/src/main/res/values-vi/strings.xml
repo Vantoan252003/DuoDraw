@@ -142,4 +142,23 @@
     <string name="msg_completion_failed">Hoàn tất thất bại. Vui lòng thử lại.</string>
     <string name="msg_completed_success">Cả hai người chơi đều đồng ý. Bản vẽ đã được hoàn tất.</string>
     <string name="msg_saved_strokes">Đã lưu %1$d nét vẽ cho phòng %2$s.</string>
+
+    <!-- Friends & Chat -->
+    <string name="friends">Bạn bè</string>
+    <string name="friends_and_chat">Bạn bè &amp; Trò chuyện</string>
+    <string name="chat_friend_subtitle">Quản lý bạn bè và trò chuyện riêng</string>
+    <string name="add_friend">Thêm Bạn</string>
+    <string name="friend_requests">Lời mời kết bạn (%1$d)</string>
+    <string name="sent_requests">Đã gửi lời mời (%1$d)</string>
+    <string name="my_friends">Bạn bè của tôi (%1$d)</string>
+    <string name="request_sent">Đã gửi lời mời!</string>
+    <string name="accept">Chấp nhận</string>
+    <string name="reject">Từ chối</string>
+    <string name="message">Tin nhắn</string>
+    <string name="send">Gửi</string>
+    <string name="error_user_not_found">Không tìm thấy người dùng</string>
+    <string name="error_cannot_add_self">Không thể tự kết bạn với chính mình</string>
+    <string name="error_request_exists">Đã kết bạn hoặc đã gửi lời mời</string>
+    <string name="no_friends_yet">Bạn chưa có người bạn nào.</string>
+    <string name="no_friend_requests">Không có lời mời kết bạn nào.</string>
 </resources>

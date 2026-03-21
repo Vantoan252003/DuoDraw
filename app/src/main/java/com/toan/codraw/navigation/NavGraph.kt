@@ -70,6 +70,9 @@ fun NavGraph(sessionManager: SessionManager) {
                 onOpenSettings = {
                     navController.navigate("settings")
                 },
+                onNavigateToFriends = {
+                    navController.navigate("friends")
+                },
                 onLogout = {
                     authViewModel.logout()
                     navController.navigate("login") {
@@ -134,6 +137,26 @@ fun NavGraph(sessionManager: SessionManager) {
 
         composable("settings") {
             SettingsScreen(onNavigateBack = { navController.popBackStack() })
+        }
+
+        composable("friends") {
+            com.toan.codraw.presentation.ui.FriendsScreen(
+                onNavigateBack = { navController.popBackStack() },
+                onNavigateToChat = { friendUsername ->
+                    navController.navigate("chat/$friendUsername")
+                }
+            )
+        }
+
+        composable(
+            route = "chat/{friendUsername}",
+            arguments = listOf(navArgument("friendUsername") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val friendUsername = backStackEntry.arguments?.getString("friendUsername") ?: ""
+            com.toan.codraw.presentation.ui.PrivateChatScreen(
+                friendUsername = friendUsername,
+                onNavigateBack = { navController.popBackStack() }
+            )
         }
     }
 }

@@ -9,6 +9,7 @@ import com.toan.codraw.domain.repository.DrawingRepository
 import com.toan.codraw.domain.repository.ProfileRepository
 import com.toan.codraw.domain.repository.RoomRepository
 import com.toan.codraw.domain.repository.RoomResult
+import com.toan.codraw.data.remote.GlobalWebSocketManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -35,7 +36,8 @@ class HomeViewModel @Inject constructor(
     private val sessionManager: SessionManager,
     private val roomRepository: RoomRepository,
     private val drawingRepository: DrawingRepository,
-    private val profileRepository: ProfileRepository
+    private val profileRepository: ProfileRepository,
+    private val globalWebSocketManager: GlobalWebSocketManager
 ) : ViewModel() {
 
     companion object {
@@ -81,6 +83,7 @@ class HomeViewModel @Inject constructor(
         loadActiveRoom()
         refreshHomeData()
         startPollingPublicRooms()
+        globalWebSocketManager.connect()
     }
 
     private fun loadActiveRoom() {

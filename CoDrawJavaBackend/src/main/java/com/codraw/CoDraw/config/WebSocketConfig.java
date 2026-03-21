@@ -13,14 +13,18 @@ import org.springframework.web.socket.server.standard.ServletServerContainerFact
 public class WebSocketConfig implements WebSocketConfigurer {
 
     private final DrawingWebSocketHandler drawingWebSocketHandler;
+    private final com.codraw.CoDraw.handler.GlobalWebSocketHandler globalWebSocketHandler;
 
-    public WebSocketConfig(DrawingWebSocketHandler drawingWebSocketHandler) {
+    public WebSocketConfig(DrawingWebSocketHandler drawingWebSocketHandler, com.codraw.CoDraw.handler.GlobalWebSocketHandler globalWebSocketHandler) {
         this.drawingWebSocketHandler = drawingWebSocketHandler;
+        this.globalWebSocketHandler = globalWebSocketHandler;
     }
 
     @Override
     public void registerWebSocketHandlers(WebSocketHandlerRegistry registry) {
         registry.addHandler(drawingWebSocketHandler, "/ws/draw")
+                .setAllowedOrigins("*");
+        registry.addHandler(globalWebSocketHandler, "/ws/global")
                 .setAllowedOrigins("*");
     }
 

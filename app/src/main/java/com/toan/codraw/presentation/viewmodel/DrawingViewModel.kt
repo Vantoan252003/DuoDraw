@@ -34,6 +34,12 @@ data class StrokeUi(
     val isEraser: Boolean
 )
 
+data class ChatMessage(
+    val senderId: Int,
+    val text: String,
+    val timestamp: Long = System.currentTimeMillis()
+)
+
 @HiltViewModel
 class DrawingViewModel @Inject constructor(
     private val sendDrawEventUseCase: SendDrawEventUseCase,
@@ -93,6 +99,9 @@ class DrawingViewModel @Inject constructor(
     val isCompleted = mutableStateOf(false)
     val showCompletionApprovalDialog = mutableStateOf(false)
     val awaitingGuestApproval = mutableStateOf(false)
+
+    val chatMessages = mutableStateListOf<ChatMessage>()
+    val hasUnreadMessages = mutableStateOf(false)
 
     // Shared viewport offset — synced between both players via VIEWPORT signal
     val sharedOffsetX = mutableStateOf(0f)
@@ -326,6 +335,23 @@ class DrawingViewModel @Inject constructor(
         completionMessage.value = null
     }
 
+    fun sendChatMessage(text: String) {
+        if (text.isBlank() || roomCode.isBlank()) return
+        val msg = ChatMessage(localPlayerId, text)
+        chatMessages.add(msg)
+        drawingRepository.sendRoomSignal(
+            RoomSignal(
+                type = "CHAT",
+                playerId = localPlayerId,
+                message = text
+            )
+        )
+    }
+
+    fun markMessagesAsRead() {
+        hasUnreadMessages.value = false
+    }
+
     // ── Helpers ───────────────────────────────────────────────────────────────
     private fun sendPreviewStroke() {
         if (roomCode.isBlank()) return
@@ -411,6 +437,12 @@ class DrawingViewModel @Inject constructor(
                 awaitingGuestApproval.value = false
                 showCompletionApprovalDialog.value = false
                 completionMessage.value = UiText.StringResource(R.string.msg_completion_cancelled)
+            }
+            "CHAT" -> {
+                signal.message?.takeIf { it.isNotBlank() }?.let { text ->
+                    chatMessages.add(ChatMessage(signal.playerId, text))
+                    hasUnreadMessages.value = true
+                }
             }
         }
     }
@@ -507,6 +539,8 @@ class DrawingViewModel @Inject constructor(
         opacityByTool[DrawingToolMode.MARKER] = DrawingToolMode.MARKER.defaultOpacity
         currentOpacityState.value = DrawingToolMode.PEN.defaultOpacity
         lastDrawingTool = DrawingToolMode.PEN
+        chatMessages.clear()
+        hasUnreadMessages.value = false
     }
 
     private fun clearLocalState() {
