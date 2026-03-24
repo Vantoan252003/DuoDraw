@@ -58,8 +58,7 @@ class DrawingViewModel @Inject constructor(
     }
 
     // ── Player strokes ────────────────────────────────────────────────────────
-    val player1Strokes = mutableStateListOf<StrokeUi>()
-    val player2Strokes = mutableStateListOf<StrokeUi>()
+    val allStrokes = mutableStateListOf<StrokeUi>()
 
     private val allStrokeData = mutableListOf<Stroke>()
     private val seenStrokeIds = mutableSetOf<String>()
@@ -508,7 +507,7 @@ class DrawingViewModel @Inject constructor(
             strokeWidth = stroke.strokeWidth,
             isEraser = stroke.isEraser
         )
-        if (stroke.playerId == 1) player1Strokes.add(ui) else player2Strokes.add(ui)
+        allStrokes.add(ui)
     }
 
     private fun clearPreview(playerId: Int) {
@@ -544,8 +543,7 @@ class DrawingViewModel @Inject constructor(
     }
 
     private fun clearLocalState() {
-        player1Strokes.clear()
-        player2Strokes.clear()
+        allStrokes.clear()
         allStrokeData.clear()
         seenStrokeIds.clear()
         currentStrokeId1 = null
@@ -580,11 +578,7 @@ class DrawingViewModel @Inject constructor(
         val removed = allStrokeData.removeAll { it.id == strokeId && it.playerId == playerId }
         if (!removed) return
         seenStrokeIds.remove(strokeId)
-        if (playerId == 1) {
-            player1Strokes.removeAll { it.id == strokeId }
-        } else {
-            player2Strokes.removeAll { it.id == strokeId }
-        }
+        allStrokes.removeAll { it.id == strokeId }
     }
 
     private fun parseColor(hex: String): Color {

@@ -36,8 +36,7 @@ fun SavedDrawingScreen(
     viewModel: SavedDrawingViewModel = hiltViewModel()
 ) {
     val drawing by viewModel.drawing.collectAsState()
-    val player1Strokes by viewModel.player1Strokes.collectAsState()
-    val player2Strokes by viewModel.player2Strokes.collectAsState()
+    val allStrokes by viewModel.allStrokes.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
     val errorMessage by viewModel.errorMessage.collectAsState()
 
@@ -86,33 +85,18 @@ fun SavedDrawingScreen(
                 Spacer(Modifier.height(8.dp))
 
                 Column(modifier = Modifier.weight(1f)) {
-                    SavedDrawingPlayerLabel("Player 1", MaterialTheme.colorScheme.primary)
+                    SavedDrawingPlayerLabel(stringResource(R.string.completed), MaterialTheme.colorScheme.primary)
                     Box(modifier = Modifier.weight(1f)) {
                         DrawingCanvas(
-                            strokes = player1Strokes,
-                            currentPath = Path(),
-                            currentPathColor = Color.Black,
-                            currentStrokeWidth = 5f,
-                            isCurrentPathEraserMode = false,
-                            onDragStart = { _, _ -> },
-                            onDrag = { _, _ -> },
-                            onDragEnd = {},
-                            isInputEnabled = false
-                        )
-                    }
-                }
-
-                HorizontalDivider(thickness = 2.dp, color = MaterialTheme.colorScheme.outline)
-
-                Column(modifier = Modifier.weight(1f)) {
-                    SavedDrawingPlayerLabel("Player 2", MaterialTheme.colorScheme.secondary)
-                    Box(modifier = Modifier.weight(1f)) {
-                        DrawingCanvas(
-                            strokes = player2Strokes,
-                            currentPath = Path(),
-                            currentPathColor = Color.Black,
-                            currentStrokeWidth = 5f,
-                            isCurrentPathEraserMode = false,
+                            strokes = allStrokes,
+                            currentPath1 = Path(),
+                            currentPathColor1 = Color.Black,
+                            currentStrokeWidth1 = 5f,
+                            isCurrentPathEraserMode1 = false,
+                            currentPath2 = Path(),
+                            currentPathColor2 = Color.Black,
+                            currentStrokeWidth2 = 5f,
+                            isCurrentPathEraserMode2 = false,
                             onDragStart = { _, _ -> },
                             onDrag = { _, _ -> },
                             onDragEnd = {},

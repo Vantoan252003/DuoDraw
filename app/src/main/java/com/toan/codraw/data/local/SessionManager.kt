@@ -86,6 +86,6 @@ class SessionManager @Inject constructor(
         private const val KEY_ACTIVE_PLAYER_COUNT = "active_player_count"
 
         private const val DEFAULT_LANGUAGE_TAG = "vi"
-        const val DEFAULT_BASE_URL = "http://192.168.31.157:8080/"
+        const val DEFAULT_BASE_URL = "http://192.168.1.103:8080/"
     }
 }

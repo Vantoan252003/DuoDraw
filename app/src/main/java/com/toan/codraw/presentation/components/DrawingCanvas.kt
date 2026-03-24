@@ -2,7 +2,8 @@ package com.toan.codraw.presentation.components
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
-import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
@@ -22,15 +23,20 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.withTransform
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.input.pointer.positionChange
 import com.toan.codraw.presentation.viewmodel.StrokeUi
 
 @Composable
 fun DrawingCanvas(
     strokes: List<StrokeUi>,
-    currentPath: Path,
-    currentPathColor: Color,
-    currentStrokeWidth: Float,
-    isCurrentPathEraserMode: Boolean,
+    currentPath1: Path,
+    currentPathColor1: Color,
+    currentStrokeWidth1: Float,
+    isCurrentPathEraserMode1: Boolean,
+    currentPath2: Path,
+    currentPathColor2: Color,
+    currentStrokeWidth2: Float,
+    isCurrentPathEraserMode2: Boolean,
     onDragStart: (Float, Float) -> Unit,
     onDrag: (Float, Float) -> Unit,
     onDragEnd: () -> Unit,
@@ -56,23 +62,43 @@ fun DrawingCanvas(
     val offsetX = sharedOffsetX
     val offsetY = sharedOffsetY
 
-    // Single-finger drawing gesture
     val drawGestureModifier = if (isInputEnabled) {
         Modifier.pointerInput(scale, offsetX, offsetY) {
-            detectDragGestures(
-                onDragStart = { offset ->
-                    val canvasX = (offset.x - offsetX) / scale
-                    val canvasY = (offset.y - offsetY) / scale
-                    onDragStart(canvasX, canvasY)
-                },
-                onDrag = { change, _ ->
-                    val canvasX = (change.position.x - offsetX) / scale
-                    val canvasY = (change.position.y - offsetY) / scale
-                    onDrag(canvasX, canvasY)
-                    change.consume()
-                },
-                onDragEnd = { onDragEnd() }
-            )
+            awaitEachGesture {
+                val down = awaitFirstDown(requireUnconsumed = false)
+                var isDrawing = true
+
+                val canvasX = (down.position.x - offsetX) / scale
+                val canvasY = (down.position.y - offsetY) / scale
+                onDragStart(canvasX, canvasY)
+
+                do {
+                    val event = awaitPointerEvent()
+                    val pressedChanges = event.changes.filter { it.pressed }
+                    val pointerCount = pressedChanges.size
+
+                    if (pointerCount > 1) {
+                        if (isDrawing) {
+                            onDragEnd()
+                            isDrawing = false
+                        }
+                    } else if (isDrawing && pointerCount == 1) {
+                        val change = pressedChanges.firstOrNull { it.id == down.id }
+                        if (change != null) {
+                            val cx = (change.position.x - offsetX) / scale
+                            val cy = (change.position.y - offsetY) / scale
+                            onDrag(cx, cy)
+                            if (change.positionChange() != Offset.Zero) {
+                                change.consume()
+                            }
+                        }
+                    }
+                } while (pressedChanges.isNotEmpty())
+
+                if (isDrawing) {
+                    onDragEnd()
+                }
+            }
         }
     } else {
         Modifier
@@ -90,11 +116,6 @@ fun DrawingCanvas(
             translate(left = offsetX, top = offsetY)
             scale(scale, scale, pivot = Offset.Zero)
         }) {
-            val strokeStyle = Stroke(
-                width = currentStrokeWidth,
-                cap = StrokeCap.Round,
-                join = StrokeJoin.Round
-            )
 
             // Draw committed strokes
             strokes.forEach { stroke ->
@@ -110,13 +131,23 @@ fun DrawingCanvas(
                 )
             }
 
-            // Draw the in-progress stroke
-            if (!currentPath.isEmpty) {
+            // Draw the in-progress stroke for player 1
+            if (!currentPath1.isEmpty) {
                 drawPath(
-                    path = currentPath,
-                    color = if (isCurrentPathEraserMode) Color.Transparent else currentPathColor,
-                    style = strokeStyle,
-                    blendMode = if (isCurrentPathEraserMode) BlendMode.Clear else BlendMode.SrcOver
+                    path = currentPath1,
+                    color = if (isCurrentPathEraserMode1) Color.Transparent else currentPathColor1,
+                    style = Stroke(width = currentStrokeWidth1, cap = StrokeCap.Round, join = StrokeJoin.Round),
+                    blendMode = if (isCurrentPathEraserMode1) BlendMode.Clear else BlendMode.SrcOver
+                )
+            }
+
+            // Draw the in-progress stroke for player 2
+            if (!currentPath2.isEmpty) {
+                drawPath(
+                    path = currentPath2,
+                    color = if (isCurrentPathEraserMode2) Color.Transparent else currentPathColor2,
+                    style = Stroke(width = currentStrokeWidth2, cap = StrokeCap.Round, join = StrokeJoin.Round),
+                    blendMode = if (isCurrentPathEraserMode2) BlendMode.Clear else BlendMode.SrcOver
                 )
             }
         }

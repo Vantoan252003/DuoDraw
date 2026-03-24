@@ -25,11 +25,8 @@ class SavedDrawingViewModel @Inject constructor(
     private val _drawing = MutableStateFlow<CompletedDrawing?>(null)
     val drawing: StateFlow<CompletedDrawing?> = _drawing
 
-    private val _player1Strokes = MutableStateFlow<List<StrokeUi>>(emptyList())
-    val player1Strokes: StateFlow<List<StrokeUi>> = _player1Strokes
-
-    private val _player2Strokes = MutableStateFlow<List<StrokeUi>>(emptyList())
-    val player2Strokes: StateFlow<List<StrokeUi>> = _player2Strokes
+    private val _allStrokes = MutableStateFlow<List<StrokeUi>>(emptyList())
+    val allStrokes: StateFlow<List<StrokeUi>> = _allStrokes
 
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading
@@ -52,8 +49,7 @@ class SavedDrawingViewModel @Inject constructor(
             drawingRepository.getCompletedDrawing(roomCode).fold(
                 onSuccess = { drawing ->
                     _drawing.value = drawing
-                    _player1Strokes.value = drawing.strokes.filter { it.playerId == 1 }.map(::toStrokeUi)
-                    _player2Strokes.value = drawing.strokes.filter { it.playerId == 2 }.map(::toStrokeUi)
+                    _allStrokes.value = drawing.strokes.map(::toStrokeUi)
                 },
                 onFailure = {
                     _errorMessage.value = it.message ?: "Could not load drawing"

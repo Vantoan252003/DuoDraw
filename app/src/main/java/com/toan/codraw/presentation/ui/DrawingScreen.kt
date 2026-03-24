@@ -128,40 +128,26 @@ fun DrawingScreen(
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
     ) {
-        Row(modifier = Modifier.fillMaxSize()) {
             CanvasPane(
-                strokes = viewModel.player1Strokes,
-                currentPath = currentPath1,
-                currentPathColor = currentPathColor1,
-                currentStrokeWidth = currentPathWidth1,
-                isCurrentPathEraserMode = currentPathEraser1,
-                isInputEnabled = localPlayerId == 1 && !isCompleted,
-                isLocalPane = localPlayerId == 1,
+                strokes = viewModel.allStrokes,
+                currentPath1 = currentPath1,
+                currentPathColor1 = currentPathColor1,
+                currentStrokeWidth1 = currentPathWidth1,
+                isCurrentPathEraserMode1 = currentPathEraser1,
+                currentPath2 = currentPath2,
+                currentPathColor2 = currentPathColor2,
+                currentStrokeWidth2 = currentPathWidth2,
+                isCurrentPathEraserMode2 = currentPathEraser2,
+                isInputEnabled = !isCompleted,
+                isLocalPane = false, // We no longer need the "You" badge specific to a split pane
                 onDragStart = viewModel::startDrawing,
                 onDrag = viewModel::updateDrawing,
                 onDragEnd = viewModel::finishDrawing,
                 sharedOffsetX = sharedOffsetX,
                 sharedOffsetY = sharedOffsetY,
                 onPanChanged = viewModel::onPanDelta,
-                modifier = Modifier.weight(1f)
+                modifier = Modifier.fillMaxSize()
             )
-            CanvasPane(
-                strokes = viewModel.player2Strokes,
-                currentPath = currentPath2,
-                currentPathColor = currentPathColor2,
-                currentStrokeWidth = currentPathWidth2,
-                isCurrentPathEraserMode = currentPathEraser2,
-                isInputEnabled = localPlayerId == 2 && !isCompleted,
-                isLocalPane = localPlayerId == 2,
-                onDragStart = viewModel::startDrawing,
-                onDrag = viewModel::updateDrawing,
-                onDragEnd = viewModel::finishDrawing,
-                sharedOffsetX = sharedOffsetX,
-                sharedOffsetY = sharedOffsetY,
-                onPanChanged = viewModel::onPanDelta,
-                modifier = Modifier.weight(1f)
-            )
-        }
 
         Row(
             modifier = Modifier
@@ -306,10 +292,14 @@ fun DrawingScreen(
 @Composable
 private fun CanvasPane(
     strokes: List<com.toan.codraw.presentation.viewmodel.StrokeUi>,
-    currentPath: androidx.compose.ui.graphics.Path,
-    currentPathColor: androidx.compose.ui.graphics.Color,
-    currentStrokeWidth: Float,
-    isCurrentPathEraserMode: Boolean,
+    currentPath1: androidx.compose.ui.graphics.Path,
+    currentPathColor1: androidx.compose.ui.graphics.Color,
+    currentStrokeWidth1: Float,
+    isCurrentPathEraserMode1: Boolean,
+    currentPath2: androidx.compose.ui.graphics.Path,
+    currentPathColor2: androidx.compose.ui.graphics.Color,
+    currentStrokeWidth2: Float,
+    isCurrentPathEraserMode2: Boolean,
     isInputEnabled: Boolean,
     isLocalPane: Boolean,
     onDragStart: (Float, Float) -> Unit,
@@ -323,10 +313,14 @@ private fun CanvasPane(
     Box(modifier = modifier.fillMaxSize()) {
         DrawingCanvas(
             strokes = strokes,
-            currentPath = currentPath,
-            currentPathColor = currentPathColor,
-            currentStrokeWidth = currentStrokeWidth,
-            isCurrentPathEraserMode = isCurrentPathEraserMode,
+            currentPath1 = currentPath1,
+            currentPathColor1 = currentPathColor1,
+            currentStrokeWidth1 = currentStrokeWidth1,
+            isCurrentPathEraserMode1 = isCurrentPathEraserMode1,
+            currentPath2 = currentPath2,
+            currentPathColor2 = currentPathColor2,
+            currentStrokeWidth2 = currentStrokeWidth2,
+            isCurrentPathEraserMode2 = isCurrentPathEraserMode2,
             onDragStart = onDragStart,
             onDrag = onDrag,
             onDragEnd = onDragEnd,
