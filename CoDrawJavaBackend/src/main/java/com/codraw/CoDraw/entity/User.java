@@ -7,7 +7,10 @@ import lombok.NoArgsConstructor;
 @Data
 @NoArgsConstructor
 @Entity
-@Table(name = "users", uniqueConstraints = {
+@Table(name = "users", indexes = {
+        @Index(name = "idx_user_username", columnList = "username", unique = true),
+        @Index(name = "idx_user_email", columnList = "email", unique = true)
+}, uniqueConstraints = {
         @UniqueConstraint(columnNames = "username"),
         @UniqueConstraint(columnNames = "email")
 })

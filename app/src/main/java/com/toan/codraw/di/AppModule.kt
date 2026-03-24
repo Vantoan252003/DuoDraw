@@ -7,6 +7,7 @@ import com.toan.codraw.data.remote.ApiService
 import com.toan.codraw.data.remote.BaseUrlInterceptor
 import com.toan.codraw.data.remote.DrawingWebSocketListener
 import com.toan.codraw.data.remote.WebSocketManager
+import com.toan.codraw.data.remote.RetryInterceptor
 import com.toan.codraw.data.repository.AuthRepositoryImpl
 import com.toan.codraw.data.repository.DrawingRepositoryImpl
 import com.toan.codraw.data.repository.ProfileRepositoryImpl
@@ -48,6 +49,7 @@ object NetworkModule {
             level = HttpLoggingInterceptor.Level.BODY
         }
         return OkHttpClient.Builder()
+            .addInterceptor(RetryInterceptor(maxRetries = 3))
             .addInterceptor(baseUrlInterceptor)
             .addInterceptor(logging)
             .readTimeout(30, TimeUnit.SECONDS)

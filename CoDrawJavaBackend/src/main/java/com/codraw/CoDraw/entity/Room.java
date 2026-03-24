@@ -9,7 +9,11 @@ import java.time.LocalDateTime;
 @Data
 @NoArgsConstructor
 @Entity
-@Table(name = "rooms")
+@Table(name = "rooms", indexes = {
+        @Index(name = "idx_room_code", columnList = "roomCode", unique = true),
+        @Index(name = "idx_room_type_status", columnList = "roomType, status"),
+        @Index(name = "idx_room_host", columnList = "hostUsername")
+})
 public class Room {
 
     @Id
@@ -55,4 +59,3 @@ public class Room {
         this.roomType = roomType;
     }
 }
-

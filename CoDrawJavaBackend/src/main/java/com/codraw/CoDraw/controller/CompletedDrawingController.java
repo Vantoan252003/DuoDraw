@@ -3,6 +3,7 @@ package com.codraw.CoDraw.controller;
 import com.codraw.CoDraw.dto.CompleteDrawingRequest;
 import com.codraw.CoDraw.entity.User;
 import com.codraw.CoDraw.service.CompletedDrawingService;
+import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
@@ -32,7 +33,7 @@ public class CompletedDrawingController {
     @PostMapping("/complete")
     public ResponseEntity<?> completeDrawing(
             Authentication auth,
-            @RequestBody CompleteDrawingRequest request) {
+            @Valid @RequestBody CompleteDrawingRequest request) {
         try {
             return ResponseEntity.ok(
                     completedDrawingService.completeDrawing(

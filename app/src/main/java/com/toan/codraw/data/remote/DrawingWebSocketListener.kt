@@ -22,6 +22,12 @@ class DrawingWebSocketListener(
     val connectionStateFlow: MutableStateFlow<ConnectionState> = MutableStateFlow(ConnectionState.IDLE)
 ) : WebSocketListener() {
 
+    /** Called by WebSocketManager to trigger auto-reconnect on unexpected disconnect. */
+    var onDisconnect: ((code: Int, reason: String) -> Unit)? = null
+
+    /** Called by WebSocketManager to trigger auto-reconnect on connection failure. */
+    var onFailure: ((Throwable) -> Unit)? = null
+
     override fun onOpen(webSocket: WebSocket, response: Response) {
         connectionStateFlow.value = ConnectionState.CONNECTED
         Log.d("CoDraw-WS", "WebSocket opened")
@@ -68,10 +74,12 @@ class DrawingWebSocketListener(
     override fun onClosing(webSocket: WebSocket, code: Int, reason: String) {
         connectionStateFlow.value = ConnectionState.DISCONNECTED
         webSocket.close(code, reason)
+        onDisconnect?.invoke(code, reason)
     }
 
     override fun onFailure(webSocket: WebSocket, t: Throwable, response: Response?) {
         connectionStateFlow.value = ConnectionState.ERROR
         Log.e("CoDraw-WS", "WebSocket error", t)
+        onFailure?.invoke(t)
     }
 }

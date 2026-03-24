@@ -5,6 +5,7 @@ import com.codraw.CoDraw.dto.UpdateProfileRequest;
 import com.codraw.CoDraw.dto.UpdatePasswordRequest;
 import com.codraw.CoDraw.entity.User;
 import com.codraw.CoDraw.service.ProfileService;
+import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
@@ -40,7 +41,7 @@ public class ProfileController {
     @PutMapping
     public ResponseEntity<?> updateProfile(
             Authentication auth,
-            @RequestBody UpdateProfileRequest request
+            @Valid @RequestBody UpdateProfileRequest request
     ) {
         try {
             return ResponseEntity.ok(profileService.updateProfile(auth.getName(), request));

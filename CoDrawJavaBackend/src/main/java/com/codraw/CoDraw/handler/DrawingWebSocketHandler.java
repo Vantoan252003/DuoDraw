@@ -3,6 +3,8 @@ package com.codraw.CoDraw.handler;
 import com.codraw.CoDraw.model.StrokeMessage;
 import com.codraw.CoDraw.service.CanvasStateService;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.CloseStatus;
 import org.springframework.web.socket.TextMessage;
@@ -10,28 +12,24 @@ import org.springframework.web.socket.WebSocketSession;
 import org.springframework.web.socket.handler.ConcurrentWebSocketSessionDecorator;
 import org.springframework.web.socket.handler.TextWebSocketHandler;
 
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * WebSocket handler ho tro phong ve.
+ * WebSocket handler for drawing rooms.
  *
- * URL ket noi: ws://host:8080/ws/draw?roomCode=ABC123&token=<jwt>
+ * URL: ws://host:8080/ws/draw?roomCode=ABC123&token=<jwt>
  *
- * Tin hieu dac biet (JSON):
- *   {"type":"JOIN","roomCode":"ABC123"}   -> server gui lai lich su strokes tu Redis
- *   {"type":"CLEAR","roomCode":"ABC123"}  -> xoa canvas cua phong tren Redis
- *   {"type":"STROKE", ... stroke fields}  -> broadcast + luu vao Redis
- *
- * Fix: Wrap moi session bang ConcurrentWebSocketSessionDecorator de ghi message
- *      tu nhieu thread dong thoi ma khong bi loi "sendMessage from multiple threads".
- *      Send timeout 5s, buffer 256KB – du lon cho preview strokes.
+ * Wraps each session with {@link ConcurrentWebSocketSessionDecorator} to allow
+ * safe concurrent message sends (queued, not thrown).
+ * Send timeout 5 s, buffer 256 KB – sufficient for preview strokes.
  */
 @Component
 public class DrawingWebSocketHandler extends TextWebSocketHandler {
+
+    private static final Logger log = LoggerFactory.getLogger(DrawingWebSocketHandler.class);
 
     private static final int SEND_TIME_LIMIT_MS = 5_000;
     private static final int SEND_BUFFER_SIZE_LIMIT = 256 * 1024; // 256KB
@@ -68,7 +66,6 @@ public class DrawingWebSocketHandler extends TextWebSocketHandler {
         String roomCode = getRoomCode(rawSession);
         if (roomCode == null || roomCode.isBlank()) return;
 
-        // Wrap the session so concurrent sends are safe (queued, not thrown)
         ConcurrentWebSocketSessionDecorator session = new ConcurrentWebSocketSessionDecorator(
                 rawSession, SEND_TIME_LIMIT_MS, SEND_BUFFER_SIZE_LIMIT
         );
@@ -84,22 +81,21 @@ public class DrawingWebSocketHandler extends TextWebSocketHandler {
                 String json = objectMapper.writeValueAsString(stroke);
                 session.sendMessage(new TextMessage(json));
             } catch (Exception e) {
-                System.err.println("[CoDraw] Error replaying history to " + rawSession.getId() + ": " + e.getMessage());
+                log.error("Error replaying history to session {}: {}", rawSession.getId(), e.getMessage());
             }
         }
 
-        System.out.println("[CoDraw] Session " + rawSession.getId()
-                + " joined room " + roomCode
-                + " | total in room: " + rooms.get(roomCode).size());
+        log.info("Session {} joined room {} | total in room: {}",
+                rawSession.getId(), roomCode, rooms.get(roomCode).size());
     }
 
     @Override
+    @SuppressWarnings("unchecked")
     protected void handleTextMessage(WebSocketSession rawSession, TextMessage message) throws Exception {
         String roomCode = sessionRoom.get(rawSession.getId());
         if (roomCode == null) return;
 
         String payload = message.getPayload();
-        @SuppressWarnings("unchecked")
         Map<String, Object> map = objectMapper.readValue(payload, Map.class);
         String type = map.getOrDefault("type", "STROKE").toString();
 
@@ -114,7 +110,6 @@ public class DrawingWebSocketHandler extends TextWebSocketHandler {
         }
 
         if (RELAY_ONLY_TYPES.contains(type)) {
-            // Relay-only: forward to peers, do NOT persist to Redis
             broadcast(roomCode, rawSession.getId(), payload, true);
             return;
         }
@@ -130,15 +125,12 @@ public class DrawingWebSocketHandler extends TextWebSocketHandler {
     @Override
     public void afterConnectionClosed(WebSocketSession rawSession, CloseStatus status) {
         removeSession(rawSession.getId());
-        System.out.println("[CoDraw] Session " + rawSession.getId()
-                + " disconnected | status: " + status);
+        log.info("Session {} disconnected | status: {}", rawSession.getId(), status);
     }
 
     @Override
     public void handleTransportError(WebSocketSession rawSession, Throwable exception) {
-        // Log but do NOT call afterConnectionClosed manually — Spring will call it
-        System.err.println("[CoDraw] Transport error for session " + rawSession.getId()
-                + ": " + exception.getMessage());
+        log.error("Transport error for session {}: {}", rawSession.getId(), exception.getMessage());
         try {
             if (rawSession.isOpen()) rawSession.close(CloseStatus.SERVER_ERROR);
         } catch (Exception ignored) {}
@@ -170,7 +162,7 @@ public class DrawingWebSocketHandler extends TextWebSocketHandler {
                 try {
                     s.sendMessage(msg);
                 } catch (Exception e) {
-                    System.err.println("[CoDraw] Broadcast error to " + s.getId() + ": " + e.getMessage());
+                    log.warn("Broadcast error to session {}: {}", s.getId(), e.getMessage());
                 }
             }
         }
